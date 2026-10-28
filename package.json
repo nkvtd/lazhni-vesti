@@ -1,0 +1,37 @@
+{
+  "name": "lazhni-vesti",
+  "scripts": {
+    "dev": "vike dev",
+    "build": "vike build",
+    "preview": "vike build && vike preview",
+    "lint": "biome lint --write .",
+    "format": "biome format --write .",
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:migrate": "drizzle-kit migrate",
+    "drizzle:studio": "drizzle-kit studio",
+    "prod": "docker compose up -d --build"
+  },
+  "dependencies": {
+    "@universal-middleware/core": "^0.7.2",
+    "@vikejs/hono": "^0.4.1",
+    "better-auth": "^1.7.13",
+    "drizzle-kit": "^0.31.11",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.14",
+    "postgres": "^3.4.9",
+    "telefunc": "^0.3.0",
+    "vike": "^0.4.268",
+    "vike-vue": "^0.9.16",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^20.19.37",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5"
+  },
+  "type": "module"
+}
