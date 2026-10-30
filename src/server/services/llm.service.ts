@@ -6,7 +6,7 @@ export class LlmService {
 
     constructor(
         private readonly apiKey: string,
-        private readonly model = "deepseek-v4.1-flash",
+        private readonly model = "gpt-6-luna",
         baseURL = "https://opencode.ai/inference/go/openai/v1",
     ) {
         this.client = new OpenAI({
