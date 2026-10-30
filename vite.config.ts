@@ -1,9 +1,9 @@
+import tailwindcss from "@tailwindcss/vite";
+import vue from "@vitejs/plugin-vue";
+import { telefunc } from "telefunc/vite";
 import vike from "vike/plugin";
 import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
-import { telefunc } from "telefunc/vite";
-import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
-  plugins: [vike(), tailwindcss(), telefunc(), vue()],
+    plugins: [vike(), tailwindcss(), telefunc(), vue()],
 });
