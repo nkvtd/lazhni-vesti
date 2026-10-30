@@ -150,3 +150,5 @@ dist
 # aws-cdk
 .cdk.staging
 cdk.out
+
+.agents/

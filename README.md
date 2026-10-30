@@ -43,4 +43,3 @@ SSR is enabled by default. You can [disable it](https://vike.dev/ssr) for all or
 ### HTML Streaming
 
 You can [enable/disable HTML streaming](https://vike.dev/stream) for all or specific pages.
-
