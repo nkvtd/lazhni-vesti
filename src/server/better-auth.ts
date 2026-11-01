@@ -5,9 +5,6 @@ import * as authSchema from "../database/drizzle/schema/auth";
 import { env } from "./env";
 import { getServices } from "./services";
 
-// Better Auth keeps its own tables (user/session/account/verification) so it only needs the engine.
-// With Drizzle it reuses the app's instance (Drizzle owns the schema + migrations); otherwise it
-// opens its own connection and creates the tables via `better-auth:migrate` (or a D1 SQL migration).
 function getDatabase(_runtime?: RuntimeAdapter): BetterAuthOptions["database"] {
     return drizzleAdapter(getServices().db, {
         provider: "pg",
