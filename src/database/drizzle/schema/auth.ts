@@ -7,10 +7,6 @@ import {
     timestamp,
 } from "drizzle-orm/pg-core";
 
-// Better Auth's tables, owned by Drizzle so its migrations create them.
-// Regenerate with `npx auth generate` if you customize the Better Auth config.
-// Column names are snake_case to match Better Auth's Drizzle adapter defaults.
-
 export const user = pgTable("user", {
     id: pgText("id").primaryKey(),
     name: pgText("name").notNull(),
