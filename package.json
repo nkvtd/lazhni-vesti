@@ -35,7 +35,7 @@
         "vue": "^3.5.44"
     },
     "devDependencies": {
-        "@biomejs/biome": "2.6.3",
+        "@biomejs/biome": "2.6.4",
         "@tailwindcss/vite": "^4.3.3",
         "@types/node": "^20.19.37",
         "@vitejs/plugin-vue": "^6.0.10",
