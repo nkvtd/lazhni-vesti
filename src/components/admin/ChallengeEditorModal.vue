@@ -146,6 +146,7 @@ watch(
               }))
             : [{ answer: "", hint: "" }];
         error.value = null;
+        // biome-ignore lint/style/useVueNextTickPromise: callback form keeps focus logic local
         nextTick(() => firstField.value?.focus());
     },
     { immediate: true },

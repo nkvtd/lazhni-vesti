@@ -96,9 +96,13 @@ import {
     useGameSession,
 } from "../../composables/useGameSession";
 import { errMessage } from "../../utils/error";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import AnonSyncBanner from "./AnonSyncBanner.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import GameSummaryModal from "./GameSummaryModal.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import HeadlineBoard from "./HeadlineBoard.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import ScoreHud from "./ScoreHud.vue";
 
 const { initialChallenge, isArchive = false } = defineProps<{
@@ -137,6 +141,7 @@ const activeHintText = computed(
 );
 
 function focusBlankInput(index: number) {
+    // biome-ignore lint/style/useVueNextTickPromise: callback form keeps focus logic local
     nextTick(() => {
         document
             .querySelector<HTMLInputElement>(

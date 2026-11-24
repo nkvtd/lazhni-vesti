@@ -48,6 +48,7 @@
 </template>
 
 <script setup lang="ts">
+// biome-ignore lint/style/useVueMultiWordComponentNames: "Navbar" is the established name
 import { usePageContext } from "vike-vue/usePageContext";
 
 const pageContext = usePageContext();

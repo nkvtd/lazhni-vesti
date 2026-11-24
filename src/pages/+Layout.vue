@@ -9,6 +9,8 @@
 </template>
 
 <script setup lang="ts">
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import Footer from "../components/layout/Footer.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import Navbar from "../components/layout/Navbar.vue";
 </script>

@@ -10,7 +10,9 @@
 
 <script setup lang="ts">
 import { useData } from "vike-vue/useData";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import GamePlay from "../../../components/game/GamePlay.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatMkDate } from "../../../utils/format";
 import type { Data } from "./+data";
 

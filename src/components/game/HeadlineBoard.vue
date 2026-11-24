@@ -26,7 +26,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ClientChallenge } from "../../composables/useGameSession";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatMkDate } from "../../utils/format";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import WordBlankSlot from "./WordBlankSlot.vue";
 
 const props = defineProps<{

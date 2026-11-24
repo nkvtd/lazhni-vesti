@@ -116,8 +116,10 @@ import { createAuthClient } from "better-auth/vue";
 import { navigate } from "vike/client/router";
 import { useData } from "vike-vue/useData";
 import { ref } from "vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import BadgeIcon from "../../components/ui/BadgeIcon.vue";
 import { errMessage } from "../../utils/error";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatIsoDate } from "../../utils/format";
 import type { Data } from "./+data";
 import { onUpdateUsername } from "./Account.telefunc";

@@ -50,6 +50,7 @@
 <script setup lang="ts">
 import { useData } from "vike-vue/useData";
 import { usePageContext } from "vike-vue/usePageContext";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import GamePlay from "../../components/game/GamePlay.vue";
 import type { Data } from "./+data";
 

@@ -64,9 +64,12 @@
 <script setup lang="ts">
 import { useData } from "vike-vue/useData";
 import { onBeforeUnmount, ref, watch } from "vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import ChallengeEditorModal from "../../components/admin/ChallengeEditorModal.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import StagedArticleRow from "../../components/admin/StagedArticleRow.vue";
 import { errMessage } from "../../utils/error";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatMkDate } from "../../utils/format";
 import type { Data } from "./+data";
 import {
