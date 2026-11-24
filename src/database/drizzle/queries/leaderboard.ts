@@ -1,6 +1,12 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { db as Db } from "../db";
-import { dailyChallenges, gameSessions, user } from "../schema";
+import {
+    badges,
+    dailyChallenges,
+    gameSessions,
+    user,
+    usersToBadges,
+} from "../schema";
 import { getSkopjeDateString } from "./util";
 
 export async function getLeaderboardsData(db: Db) {
@@ -45,5 +51,43 @@ export async function getLeaderboardsData(db: Db) {
         .orderBy(desc(user.totalPoints), desc(user.longestStreak))
         .limit(50);
 
-    return { today, daily, allTime };
+    const userIds = [
+        ...daily.map((d) => d.userId),
+        ...allTime.map((a) => a.userId),
+    ];
+
+    const badgeRows =
+        userIds.length > 0
+            ? await db
+                  .select({
+                      userId: usersToBadges.userId,
+                      name: badges.name,
+                      icon: badges.icon,
+                  })
+                  .from(usersToBadges)
+                  .innerJoin(badges, eq(usersToBadges.badgeId, badges.id))
+                  .where(inArray(usersToBadges.userId, userIds))
+            : [];
+
+    const badgesByUser = new Map<
+        string,
+        Array<{ name: string; icon: string }>
+    >();
+    for (const row of badgeRows) {
+        const list = badgesByUser.get(row.userId) ?? [];
+        list.push({ name: row.name, icon: row.icon });
+        badgesByUser.set(row.userId, list);
+    }
+
+    return {
+        today,
+        daily: daily.map((d) => ({
+            ...d,
+            badges: badgesByUser.get(d.userId) ?? [],
+        })),
+        allTime: allTime.map((a) => ({
+            ...a,
+            badges: badgesByUser.get(a.userId) ?? [],
+        })),
+    };
 }

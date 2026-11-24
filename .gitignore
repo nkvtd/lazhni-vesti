@@ -152,3 +152,8 @@ dist
 cdk.out
 
 .agents/
+
+ARCHITECTURE.md
+
+# Local dev seed/demo scripts
+scripts/

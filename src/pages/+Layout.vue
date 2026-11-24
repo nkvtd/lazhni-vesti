@@ -1,47 +1,16 @@
-<!-- https://vike.dev/Layout -->
-
 <template>
-  <div class="layout">
-    <div class="content">
+  <div class="flex min-h-screen flex-col">
+    <Navbar />
+    <main class="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 pt-8 pb-16">
       <slot />
-    </div>
+    </main>
+    <Footer />
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import Footer from "../components/layout/Footer.vue";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import Navbar from "../components/layout/Navbar.vue";
 </script>
-
-<style>
-body {
-  margin: 0;
-  font-family: sans-serif;
-}
-* {
-  box-sizing: border-box;
-}
-a {
-  text-decoration: none;
-}
-</style>
-
-<style scoped>
-.layout {
-  display: flex;
-  max-width: 900px;
-  margin: auto;
-}
-.content {
-  padding: 20px;
-  padding-bottom: 50px;
-  min-height: 100vh;
-  flex-grow: 1;
-}
-/* Page Transition Animation */
-#page-content {
-  opacity: 1;
-  transition: opacity 0.3s ease-in-out;
-}
-body.page-transition #page-content {
-  opacity: 0;
-}
-</style>
