@@ -1,6 +1,9 @@
 <template>
-  <h1>{{ heading }}</h1>
-  <p>{{ abortReason }}</p>
+  <div class="card mx-auto mt-16 max-w-md p-6 text-center">
+    <h1 class="font-display text-2xl font-bold">{{ heading }}</h1>
+    <p class="text-ink-soft">{{ abortReason }}</p>
+    <a href="/" class="btn btn-secondary mt-4">Дома</a>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -10,8 +13,8 @@ const pageContext = usePageContext();
 let { is404, abortReason } = pageContext;
 if (!abortReason) {
     abortReason = is404
-        ? "This page could not be found."
-        : "Something went wrong.";
+        ? "Оваа страница не постои."
+        : "Обидете се повторно подоцна.";
 }
-const heading = is404 ? "Page Not Found" : "Internal Error";
+const heading = is404 ? "Страницата не е пронајдена" : "Се случи грешка";
 </script>
