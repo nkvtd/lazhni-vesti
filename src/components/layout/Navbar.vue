@@ -1,7 +1,9 @@
 <template>
-  <header class="sticky top-0 z-40 border-b-2 border-ink bg-paper">
+  <header ref="headerEl" class="sticky top-0 z-40 border-b-2 border-ink bg-paper">
     <div class="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3 px-4 py-3">
-      <a href="/" class="flex items-center gap-2 whitespace-nowrap"><span class="flex size-7 items-center justify-center rounded-md border-2 border-ink bg-accent font-display text-base font-black text-white shadow-hard-sm" aria-hidden="true">?</span><span class="font-display text-2xl font-black tracking-tight text-ink">Лажни вести<span class="text-accent">?</span></span></a>
+      <a href="/" class="flex items-center whitespace-nowrap">
+        <img src="/assets/lv-logo.svg" alt="Лажни вести?" class="h-9 w-auto sm:h-10" />
+      </a>
 
       <nav class="hidden items-center gap-1.5 md:flex" aria-label="Главно мени">
         <a href="/" :class="linkClass('/')" :aria-current="isActive('/') ? 'page' : undefined">Игра</a>
@@ -67,7 +69,7 @@
           <a href="/login" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Најава</a>
           <a href="/signup" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Регистрација</a>
         </template>
-        <a v-else href="/account" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Мој профил</a>
+        <a v-else href="/account" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Мој профил ({{ pageContext.user.name }})</a>
       </div>
     </nav>
   </header>
@@ -81,6 +83,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 const pageContext = usePageContext();
 
 const menuOpen = ref(false);
+const headerEl = ref<HTMLElement | null>(null);
 
 // Close the menu on client-side navigation.
 watch(
@@ -94,8 +97,20 @@ function onKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") menuOpen.value = false;
 }
 
-onMounted(() => document.addEventListener("keydown", onKeydown));
-onBeforeUnmount(() => document.removeEventListener("keydown", onKeydown));
+function onDocumentClick(e: MouseEvent) {
+    if (menuOpen.value && !headerEl.value?.contains(e.target as Node)) {
+        menuOpen.value = false;
+    }
+}
+
+onMounted(() => {
+    document.addEventListener("keydown", onKeydown);
+    document.addEventListener("click", onDocumentClick);
+});
+onBeforeUnmount(() => {
+    document.removeEventListener("keydown", onKeydown);
+    document.removeEventListener("click", onDocumentClick);
+});
 
 const isActive = (href: string) =>
     href === "/"

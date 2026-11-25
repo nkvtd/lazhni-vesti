@@ -154,6 +154,7 @@ cdk.out
 .agents/
 
 ARCHITECTURE.md
+DATA_FLOW.md
 
 # Local dev seed/demo scripts
 scripts/

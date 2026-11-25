@@ -2,6 +2,7 @@ import { usePageContext } from "vike-vue/usePageContext";
 import { computed, onMounted, ref } from "vue";
 import type { getChallengeForClient } from "../database/drizzle/queries/challenges";
 import { calculateSessionScore } from "../database/drizzle/queries/gameplay";
+import { getSkopjeDateString } from "../database/drizzle/queries/util";
 import type { BlankProgressState } from "../database/drizzle/schema";
 import {
     type AnonClientState,
@@ -69,9 +70,15 @@ export function useGameSession(initialChallenge: ClientChallenge | null) {
             if (saved.challengeId !== challenge.value.id) return;
 
             if (pageContext.user) {
-                await onSyncAnonymousSession(saved);
-                localStorage.removeItem(storageKey.value);
-                window.location.reload();
+                if (challenge.value.playDate === getSkopjeDateString()) {
+                    await onSyncAnonymousSession(saved);
+                    localStorage.removeItem(storageKey.value);
+                    window.location.reload();
+                } else {
+                    // Guest progress on a past date can never be synced (backend only
+                    // accepts today's challenge) — clear the stale key without reloading.
+                    localStorage.removeItem(storageKey.value);
+                }
             } else {
                 challenge.value.wrongGuessesCount = saved.wrongGuessesCount;
                 challenge.value.hintsUsedCount = saved.hintsUsedCount;

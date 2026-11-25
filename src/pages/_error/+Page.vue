@@ -11,7 +11,7 @@ import { usePageContext } from "vike-vue/usePageContext";
 
 const pageContext = usePageContext();
 let { is404, abortReason } = pageContext;
-if (!abortReason) {
+if (typeof abortReason !== "string" || !abortReason) {
     abortReason = is404
         ? "Оваа страница не постои."
         : "Обидете се повторно подоцна.";

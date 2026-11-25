@@ -3,27 +3,59 @@
   <h1 class="font-display text-3xl font-black tracking-tight text-ink">Мој профил</h1>
 
   <div class="card mt-6 p-5 sm:p-6">
-    <div class="flex items-center gap-4">
-      <span class="flex size-14 shrink-0 items-center justify-center rounded-xl border-2 border-ink bg-accent font-display text-2xl font-black text-white shadow-hard-sm" aria-hidden="true">{{ data.user.name.charAt(0).toUpperCase() }}</span>
-      <div class="min-w-0 flex-1">
-        <template v-if="!editing">
-          <div class="flex flex-wrap items-center gap-2">
-            <p class="font-display text-xl font-bold text-ink">{{ data.user.name }}</p>
-            <button type="button" class="btn btn-secondary btn-sm" @click="startEdit">Смени име</button>
-          </div>
-        </template>
-        <template v-else>
-          <form class="flex flex-wrap items-center gap-2" @submit.prevent="saveName">
-            <input v-model="nameDraft" class="input max-w-xs" aria-label="Ново име" maxlength="30" />
-            <button type="submit" class="btn btn-primary btn-sm" :disabled="busy">Зачувај</button>
-            <button type="button" class="btn btn-secondary btn-sm" @click="cancelEdit">Откажи</button>
-          </form>
-          <p v-if="nameError" role="alert" class="mt-2 text-sm text-wrong">{{ nameError }}</p>
-        </template>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex min-w-0 items-center gap-4">
+        <span class="flex size-14 shrink-0 items-center justify-center rounded-xl border-2 border-ink bg-accent font-display text-2xl font-black text-white shadow-hard-sm" aria-hidden="true">{{ data.user.name.charAt(0).toUpperCase() }}</span>
+        <div class="min-w-0 flex-1">
+          <template v-if="!editing">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="font-display text-xl font-bold text-ink">{{ data.user.name }}</p>
+              <button type="button" class="btn btn-secondary btn-sm" @click="startEdit">Смени име</button>
+            </div>
+          </template>
+          <template v-else>
+            <form class="flex flex-wrap items-center gap-2" @submit.prevent="saveName">
+              <input v-model="nameDraft" class="input max-w-xs" aria-label="Ново име" minlength="3" maxlength="30" required />
+              <button type="submit" class="btn btn-primary btn-sm" :disabled="busy">Зачувај</button>
+              <button type="button" class="btn btn-secondary btn-sm" @click="cancelEdit">Откажи</button>
+            </form>
+            <p v-if="nameError" role="alert" class="mt-2 text-sm text-wrong">{{ nameError }}</p>
+          </template>
 
-        <p class="mt-1 text-sm text-ink-soft">{{ data.user.email }}</p>
+          <p class="mt-1 text-sm text-ink-soft">{{ data.user.email }}</p>
+        </div>
       </div>
+      <button type="button" class="btn btn-sm shrink-0 border-wrong bg-wrong text-white hover:bg-wrong/90" :disabled="signOutBusy" @click="signOut">Одјава</button>
     </div>
+    <p v-if="signOutError" role="alert" class="mt-2 text-sm text-wrong">{{ signOutError }}</p>
+
+    <hr class="my-4 border-t border-ink/10" />
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p class="text-sm font-bold text-ink">Лозинка</p>
+      <button v-if="!pwEditing" type="button" class="btn btn-secondary btn-sm" @click="startPwEdit">Смени лозинка</button>
+    </div>
+    <form v-if="pwEditing" class="mt-3 flex flex-col gap-3" @submit.prevent="savePassword">
+      <div>
+        <label class="label" for="pw-current">Моментална лозинка</label>
+        <input id="pw-current" v-model="pwCurrent" class="input" type="password" autocomplete="current-password" required />
+      </div>
+      <div>
+        <label class="label" for="pw-new">Нова лозинка</label>
+        <input id="pw-new" v-model="pwNew" class="input" type="password" autocomplete="new-password" minlength="8" required />
+        <p class="mt-1 text-xs text-ink-soft">Минимум 8 карактери</p>
+      </div>
+      <div>
+        <label class="label" for="pw-confirm">Потврди нова лозинка</label>
+        <input id="pw-confirm" v-model="pwConfirm" class="input" type="password" autocomplete="new-password" minlength="8" required />
+      </div>
+      <p v-if="pwError" role="alert" class="text-sm text-wrong">{{ pwError }}</p>
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm" :disabled="pwBusy">Зачувај</button>
+        <button type="button" class="btn btn-secondary btn-sm" @click="cancelPwEdit">Откажи</button>
+      </div>
+    </form>
+    <p v-else-if="pwSuccess" role="status" class="mt-2 text-sm font-medium text-accent-strong">{{ pwSuccess }}</p>
   </div>
 
   <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -107,13 +139,11 @@
     </div>
   </section>
 
-  <button type="button" class="btn btn-secondary mt-8" :disabled="busy" @click="signOut">Одјава</button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { createAuthClient } from "better-auth/vue";
-import { navigate } from "vike/client/router";
 import { useData } from "vike-vue/useData";
 import { ref } from "vue";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only
@@ -130,7 +160,25 @@ const data = useData<Data>();
 const editing = ref(false);
 const nameDraft = ref("");
 const nameError = ref<string | null>(null);
+const signOutError = ref<string | null>(null);
+const signOutBusy = ref(false);
 const busy = ref(false);
+
+const pwEditing = ref(false);
+const pwCurrent = ref("");
+const pwNew = ref("");
+const pwConfirm = ref("");
+const pwError = ref<string | null>(null);
+const pwSuccess = ref<string | null>(null);
+const pwBusy = ref(false);
+
+const PW_ERRORS: Record<string, string> = {
+    INVALID_PASSWORD: "Моменталната лозинка не е точна.",
+    PASSWORD_TOO_SHORT: "Новата лозинка мора да има најмалку 8 карактери.",
+    PASSWORD_TOO_LONG: "Лозинката е предолга.",
+    CREDENTIAL_ACCOUNT_NOT_FOUND:
+        "Оваа сметка нема лозинка — најавувате се преку надворешен провајдер.",
+};
 
 function startEdit() {
     nameDraft.value = data.user.name;
@@ -157,12 +205,69 @@ async function saveName() {
 }
 
 async function signOut() {
-    busy.value = true;
+    signOutError.value = null;
+    signOutBusy.value = true;
     try {
         await authClient.signOut();
-        await navigate("/");
+        window.location.href = "/";
+    } catch (e) {
+        signOutError.value = errMessage(e);
     } finally {
-        busy.value = false;
+        signOutBusy.value = false;
+    }
+}
+
+function startPwEdit() {
+    pwCurrent.value = "";
+    pwNew.value = "";
+    pwConfirm.value = "";
+    pwError.value = null;
+    pwSuccess.value = null;
+    pwEditing.value = true;
+}
+
+function cancelPwEdit() {
+    pwEditing.value = false;
+    pwError.value = null;
+    pwSuccess.value = null;
+    pwCurrent.value = "";
+    pwNew.value = "";
+    pwConfirm.value = "";
+}
+
+async function savePassword() {
+    pwError.value = null;
+    if (pwNew.value.length < 8) {
+        pwError.value = "Новата лозинка мора да има најмалку 8 карактери.";
+        return;
+    }
+    if (pwNew.value !== pwConfirm.value) {
+        pwError.value = "Новите лозинки не се совпаѓаат.";
+        return;
+    }
+    pwBusy.value = true;
+    try {
+        const res = await authClient.changePassword({
+            currentPassword: pwCurrent.value,
+            newPassword: pwNew.value,
+        });
+        if (res.error) {
+            const code = (res.error as { code?: string }).code;
+            pwError.value =
+                (code && PW_ERRORS[code]) ||
+                res.error.message ||
+                "Неуспешна промена на лозинката.";
+            return;
+        }
+        pwSuccess.value = "Лозинката е сменета.";
+        pwEditing.value = false;
+        pwCurrent.value = "";
+        pwNew.value = "";
+        pwConfirm.value = "";
+    } catch {
+        pwError.value = "Неуспешна промена — проверете ја врската.";
+    } finally {
+        pwBusy.value = false;
     }
 }
 </script>

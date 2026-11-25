@@ -7,7 +7,7 @@
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Bitter:wght@700;900&family=Inter:wght@400;500;600;700&display=swap"
   />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d9488'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='bold' fill='%23faf7f2' text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="/assets/lv-logo.svg" />
 </template>
 
 <script setup lang="ts">
