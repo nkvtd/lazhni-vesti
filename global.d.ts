@@ -1,5 +1,5 @@
 import type { User } from "better-auth";
-import type { db } from "./src/database/drizzle/db";
+import type { Db } from "./src/database/drizzle/db";
 import type { LlmService } from "./src/server/services/llm.service";
 import type { ScraperService } from "./src/server/services/scraper.service";
 import type { UsernameGeneratorService } from "./src/server/services/username-generator.service";
@@ -14,7 +14,7 @@ export type AppUser = User & {
 declare global {
     namespace Vike {
         interface PageContextServer {
-            db: db;
+            db: Db;
             llm: LlmService;
             scraper: ScraperService;
             usernameGenerator: UsernameGeneratorService;
@@ -25,7 +25,7 @@ declare global {
     }
     namespace Universal {
         interface Context {
-            db: db;
+            db: Db;
             llm: LlmService;
             scraper: ScraperService;
             usernameGenerator: UsernameGeneratorService;
@@ -37,7 +37,7 @@ declare global {
 declare module "telefunc" {
     namespace Telefunc {
         interface Context {
-            db: db;
+            db: Db;
             llm: LlmService;
             scraper: ScraperService;
             usernameGenerator: UsernameGeneratorService;

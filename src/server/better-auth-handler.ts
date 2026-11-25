@@ -5,6 +5,7 @@ import {
     type UniversalMiddleware,
 } from "@universal-middleware/core";
 import { betterAuth } from "better-auth";
+import type { AppUser } from "../../global";
 import { getAuthConfig } from "./better-auth";
 
 let authSingleton: ReturnType<typeof betterAuth> | undefined;
@@ -22,7 +23,7 @@ export const betterAuthSessionMiddleware: UniversalMiddleware = enhance(
             });
             return {
                 ...context,
-                user: data?.user ?? null,
+                user: (data?.user as AppUser | undefined) ?? null,
             };
         } catch (error) {
             console.debug("[auth]:", error);

@@ -1,4 +1,4 @@
-import type { db } from "../../database/drizzle/db";
+import type { Db } from "../../database/drizzle/db";
 import { stagedArticles } from "../../database/drizzle/schema/articles";
 
 export type FeedConfig = {
@@ -58,7 +58,7 @@ const KEYWORDS = [
     "дозвола",
     "чудо",
     "шок",
-    "неверoјатно",
+    "неверојатно",
     "апсурдно",
     "необично",
     "заглави",
@@ -80,13 +80,17 @@ const KEYWORDS = [
     "министер",
     "мигранти",
     "поп",
+    "крава",
+    "овца",
+    "крави",
+    "овци",
 ];
 
 export class ScraperService {
     private isRunning = false;
 
     constructor(
-        private readonly db: db,
+        private readonly db: Db,
         private readonly feeds: FeedConfig[] = [],
         private readonly keywords = KEYWORDS,
     ) {}
@@ -155,7 +159,7 @@ export class ScraperService {
     }
 
     private async fetchFeed(url: string): Promise<string> {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.text();
     }

@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import type { db as Db } from "../db";
+import type { Db } from "../db";
 import {
     badges,
     dailyChallenges,

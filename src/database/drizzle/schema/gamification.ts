@@ -11,7 +11,7 @@ import { user } from "./auth";
 
 export const badges = pgTable("badges", {
     id: serial("id").primaryKey(),
-    name: text("name").notNull(),
+    name: text("name").notNull().unique(),
     description: text("description").notNull(),
     icon: text("icon").notNull(),
 });

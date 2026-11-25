@@ -1,7 +1,10 @@
 import { redirect, render } from "vike/abort";
 import type { PageContextServer } from "vike/types";
 import { getChallengeForClient } from "../../../database/drizzle/queries/challenges";
-import { getSkopjeDateString } from "../../../database/drizzle/queries/util";
+import {
+    getSkopjeDateString,
+    isValidDateString,
+} from "../../../database/drizzle/queries/util";
 
 export type Data = Awaited<ReturnType<typeof data>>;
 
@@ -9,7 +12,7 @@ export async function data(pageContext: PageContextServer) {
     const playDate = pageContext.routeParams.date;
     const today = getSkopjeDateString();
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(playDate)) {
+    if (!isValidDateString(playDate)) {
         throw render(404, "Невалиден формат на датум.");
     }
 

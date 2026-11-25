@@ -1,9 +1,11 @@
 import { and, eq } from "drizzle-orm";
-import type { db as Db } from "../db";
+import type { Db } from "../db";
 import {
     type BlankProgressState,
     dailyChallenges,
     gameSessions,
+    type HeadlineBlankItem,
+    user,
 } from "../schema";
 import {
     awardDailyStreakAndPoints,
@@ -33,6 +35,29 @@ export function calculateSessionScore(
     );
 }
 
+type ChallengeRow = typeof dailyChallenges.$inferSelect;
+
+function toAnswerMap(blanks: HeadlineBlankItem[]): Record<number, string> {
+    return Object.fromEntries(blanks.map((b) => [b.index, b.answer]));
+}
+
+function revealCompletedProgress(
+    blanks: HeadlineBlankItem[],
+    progress: Record<number, BlankProgressState>,
+) {
+    for (const b of blanks) {
+        progress[b.index] = {
+            ...(progress[b.index] ?? {
+                solved: false,
+                hintUsed: false,
+                wrongAttempts: 0,
+            }),
+            revealedAnswer: b.answer,
+            revealedHint: b.hint,
+        };
+    }
+}
+
 export async function handleGuessOrHint(
     db: Db,
     params: {
@@ -55,7 +80,7 @@ export async function handleGuessOrHint(
         .where(eq(dailyChallenges.id, params.challengeId));
 
     const blank = challenge?.blanks.find((b) => b.index === params.blankIndex);
-    if (!challenge || !blank) {
+    if (!challenge || !blank || challenge.playDate > getSkopjeDateString()) {
         return null;
     }
 
@@ -72,223 +97,71 @@ export async function handleGuessOrHint(
     const correct = !isHint && normalizedGuess === normalizedAnswer;
 
     if (!params.userId) {
-        const solvedSet = new Set(params.anonState?.solvedIndices ?? []);
-        const hintedSet = new Set(params.anonState?.hintedIndices ?? []);
-        const alreadySolved = solvedSet.has(blank.index);
-        const alreadyHinted = hintedSet.has(blank.index);
-
-        const currentWrong = Math.max(
-            0,
-            params.anonState?.wrongGuessesCount ?? 0,
-        );
-        const currentHints = Math.max(0, params.anonState?.hintsUsedCount ?? 0);
-        const currentScore = calculateSessionScore(currentWrong, currentHints);
-
-        if (isHint && !alreadySolved && !alreadyHinted) {
-            if (currentScore <= HINT_PENALTY) {
-                return {
-                    error: `Немате доволно поени за хинт (потребни се над ${HINT_PENALTY} поени).`,
-                };
-            }
-            hintedSet.add(blank.index);
-        }
-
-        const wrongGuessesCount =
-            currentWrong + (!alreadySolved && !isHint && !correct ? 1 : 0);
-        const hintsUsedCount =
-            currentHints + (!alreadySolved && !alreadyHinted && isHint ? 1 : 0);
-
-        if (correct) solvedSet.add(blank.index);
-
-        const score = calculateSessionScore(wrongGuessesCount, hintsUsedCount);
-        const allSolved = challenge.blanks.every((b) => solvedSet.has(b.index));
-        const completed = allSolved || score === 0;
-        const won = allSolved && score > 0;
-
-        return {
+        return handleAnonMove(challenge, blank, {
+            isHint,
             correct,
-            blankIndex: blank.index,
-            revealedAnswer: correct || completed ? blank.answer : undefined,
-            revealedHint:
-                isHint || alreadyHinted || completed ? blank.hint : undefined,
-            score,
-            wrongGuessesCount,
-            hintsUsedCount,
-            completed,
-            won,
-            sourceUrl: completed ? challenge.sourceUrl : undefined,
-            originalTitle: completed ? challenge.originalTitle : undefined,
-            allAnswers: completed
-                ? Object.fromEntries(
-                      challenge.blanks.map((b) => [b.index, b.answer]),
-                  )
-                : undefined,
+            anonState: params.anonState,
+        });
+    }
+
+    return handleRegisteredMove(db, challenge, blank, {
+        userId: params.userId,
+        isHint,
+        correct,
+    });
+}
+
+function handleAnonMove(
+    challenge: ChallengeRow,
+    blank: HeadlineBlankItem,
+    move: {
+        isHint: boolean;
+        correct: boolean;
+        anonState?: {
+            wrongGuessesCount: number;
+            hintsUsedCount: number;
+            solvedIndices: number[];
+            hintedIndices?: number[];
         };
-    }
+    },
+) {
+    const { isHint, correct, anonState } = move;
+    const solvedSet = new Set(anonState?.solvedIndices ?? []);
+    const hintedSet = new Set(anonState?.hintedIndices ?? []);
+    const alreadySolved = solvedSet.has(blank.index);
+    const alreadyHinted = hintedSet.has(blank.index);
 
-    const [existing] = await db
-        .select()
-        .from(gameSessions)
-        .where(
-            and(
-                eq(gameSessions.userId, params.userId),
-                eq(gameSessions.challengeId, challenge.id),
-            ),
-        );
+    const currentWrong = Math.max(0, anonState?.wrongGuessesCount ?? 0);
+    const currentHints = Math.max(0, anonState?.hintsUsedCount ?? 0);
+    const currentScore = calculateSessionScore(currentWrong, currentHints);
 
-    if (existing?.completed) {
-        const allSolved = challenge.blanks.every(
-            (b) => existing.progress[b.index]?.solved === true,
-        );
-        return {
-            correct: Boolean(existing.progress[blank.index]?.solved),
-            blankIndex: blank.index,
-            revealedAnswer: blank.answer,
-            revealedHint: blank.hint,
-            score: existing.score,
-            wrongGuessesCount: existing.wrongGuessesCount,
-            hintsUsedCount: existing.hintsUsedCount,
-            completed: true,
-            won: allSolved && existing.score > 0,
-            sourceUrl: challenge.sourceUrl,
-            originalTitle: challenge.originalTitle,
-            allAnswers: Object.fromEntries(
-                challenge.blanks.map((b) => [b.index, b.answer]),
-            ),
-        };
-    }
-
-    const today = getSkopjeDateString();
-    const isPastDate = challenge.playDate < today;
-
-    let isFreePlay = false;
-    let isTimeMachineSession = false;
-
-    if (existing) {
-        isFreePlay = existing.isFreePlay;
-        isTimeMachineSession = isPastDate && !existing.isFreePlay;
-    } else if (isPastDate) {
-        const tmCheck = await evaluateTimeMachineEligibility(
-            db,
-            params.userId,
-            challenge.playDate,
-        );
-        isTimeMachineSession = tmCheck.eligible;
-        isFreePlay = !tmCheck.eligible;
-    }
-
-    const progress: Record<number, BlankProgressState> = {
-        ...(existing?.progress ?? {}),
-    };
-    const slot: BlankProgressState = progress[blank.index] ?? {
-        solved: false,
-        hintUsed: false,
-        wrongAttempts: 0,
-    };
-
-    let wrongGuessesCount = existing?.wrongGuessesCount ?? 0;
-    let hintsUsedCount = existing?.hintsUsedCount ?? 0;
-    const currentScore = calculateSessionScore(
-        wrongGuessesCount,
-        hintsUsedCount,
-    );
-
-    if (!slot.solved) {
-        if (isHint && !slot.hintUsed) {
-            if (currentScore <= HINT_PENALTY) {
-                return {
-                    error: `Немате доволно поени за хинт (потребни се над ${HINT_PENALTY} поени).`,
-                };
-            }
-            slot.hintUsed = true;
-            slot.revealedHint = blank.hint;
-            hintsUsedCount += 1;
-        } else if (!isHint) {
-            if (correct) {
-                slot.solved = true;
-                slot.revealedAnswer = blank.answer;
-            } else {
-                slot.wrongAttempts += 1;
-                wrongGuessesCount += 1;
-            }
-        }
-    }
-
-    progress[blank.index] = slot;
-
-    const score = calculateSessionScore(wrongGuessesCount, hintsUsedCount);
-    const allSolved = challenge.blanks.every(
-        (b) => progress[b.index]?.solved === true,
-    );
-    const completed = allSolved || score === 0;
-    const won = allSolved && score > 0;
-
-    if (completed) {
-        for (const b of challenge.blanks) {
-            progress[b.index] = {
-                ...(progress[b.index] ?? {
-                    solved: false,
-                    hintUsed: false,
-                    wrongAttempts: 0,
-                }),
-                revealedAnswer: b.answer,
-                revealedHint: b.hint,
+    if (isHint && !alreadySolved && !alreadyHinted) {
+        if (currentScore <= HINT_PENALTY) {
+            return {
+                error: `Немате доволно поени за хинт (потребни се над ${HINT_PENALTY} поени).`,
             };
         }
+        hintedSet.add(blank.index);
     }
 
-    if (completed && won && isTimeMachineSession) {
-        const finalTmCheck = await evaluateTimeMachineEligibility(
-            db,
-            params.userId,
-            challenge.playDate,
-        );
-        if (!finalTmCheck.eligible) {
-            isTimeMachineSession = false;
-            isFreePlay = true;
-        }
-    }
+    const wrongGuessesCount =
+        currentWrong + (!alreadySolved && !isHint && !correct ? 1 : 0);
+    const hintsUsedCount =
+        currentHints + (!alreadySolved && !alreadyHinted && isHint ? 1 : 0);
 
-    await db
-        .insert(gameSessions)
-        .values({
-            userId: params.userId,
-            challengeId: challenge.id,
-            isFreePlay,
-            score,
-            wrongGuessesCount,
-            hintsUsedCount,
-            progress,
-            completed,
-            completedAt: completed ? new Date() : null,
-        })
-        .onConflictDoUpdate({
-            target: [gameSessions.userId, gameSessions.challengeId],
-            set: {
-                score,
-                wrongGuessesCount,
-                hintsUsedCount,
-                progress,
-                completed,
-                completedAt: completed ? new Date() : existing?.completedAt,
-            },
-        });
+    if (correct) solvedSet.add(blank.index);
 
-    if (completed && won && !isFreePlay) {
-        await awardDailyStreakAndPoints(
-            db,
-            params.userId,
-            challenge.playDate,
-            score,
-            isTimeMachineSession,
-        );
-    }
+    const score = calculateSessionScore(wrongGuessesCount, hintsUsedCount);
+    const allSolved = challenge.blanks.every((b) => solvedSet.has(b.index));
+    const completed = allSolved || score === 0;
+    const won = allSolved && score > 0;
 
     return {
         correct,
         blankIndex: blank.index,
-        revealedAnswer: slot.solved || completed ? blank.answer : undefined,
-        revealedHint: slot.hintUsed || completed ? blank.hint : undefined,
+        revealedAnswer: correct || completed ? blank.answer : undefined,
+        revealedHint:
+            isHint || alreadyHinted || completed ? blank.hint : undefined,
         score,
         wrongGuessesCount,
         hintsUsedCount,
@@ -296,12 +169,186 @@ export async function handleGuessOrHint(
         won,
         sourceUrl: completed ? challenge.sourceUrl : undefined,
         originalTitle: completed ? challenge.originalTitle : undefined,
-        allAnswers: completed
-            ? Object.fromEntries(
-                  challenge.blanks.map((b) => [b.index, b.answer]),
-              )
-            : undefined,
+        allAnswers: completed ? toAnswerMap(challenge.blanks) : undefined,
     };
+}
+
+function handleRegisteredMove(
+    db: Db,
+    challenge: ChallengeRow,
+    blank: HeadlineBlankItem,
+    move: { userId: string; isHint: boolean; correct: boolean },
+) {
+    const { userId, isHint, correct } = move;
+    return db.transaction(async (tx) => {
+        await tx
+            .select({ id: user.id })
+            .from(user)
+            .where(eq(user.id, userId))
+            .for("update");
+
+        const [existing] = await tx
+            .select()
+            .from(gameSessions)
+            .where(
+                and(
+                    eq(gameSessions.userId, userId),
+                    eq(gameSessions.challengeId, challenge.id),
+                ),
+            );
+
+        if (existing?.completed) {
+            const allSolved = challenge.blanks.every(
+                (b) => existing.progress[b.index]?.solved === true,
+            );
+            return {
+                correct: Boolean(existing.progress[blank.index]?.solved),
+                blankIndex: blank.index,
+                revealedAnswer: blank.answer,
+                revealedHint: blank.hint,
+                score: existing.score,
+                wrongGuessesCount: existing.wrongGuessesCount,
+                hintsUsedCount: existing.hintsUsedCount,
+                completed: true,
+                won: allSolved && existing.score > 0,
+                sourceUrl: challenge.sourceUrl,
+                originalTitle: challenge.originalTitle,
+                allAnswers: toAnswerMap(challenge.blanks),
+            };
+        }
+
+        const today = getSkopjeDateString();
+        const isPastDate = challenge.playDate < today;
+
+        let isFreePlay = false;
+        let isTimeMachineSession = false;
+
+        if (existing) {
+            isFreePlay = existing.isFreePlay;
+            isTimeMachineSession = isPastDate && !existing.isFreePlay;
+        } else if (isPastDate) {
+            const tmCheck = await evaluateTimeMachineEligibility(
+                tx,
+                userId,
+                challenge.playDate,
+            );
+            isTimeMachineSession = tmCheck.eligible;
+            isFreePlay = !tmCheck.eligible;
+        }
+
+        const progress: Record<number, BlankProgressState> = {
+            ...(existing?.progress ?? {}),
+        };
+        const slot: BlankProgressState = progress[blank.index] ?? {
+            solved: false,
+            hintUsed: false,
+            wrongAttempts: 0,
+        };
+
+        let wrongGuessesCount = existing?.wrongGuessesCount ?? 0;
+        let hintsUsedCount = existing?.hintsUsedCount ?? 0;
+        const currentScore = calculateSessionScore(
+            wrongGuessesCount,
+            hintsUsedCount,
+        );
+
+        if (!slot.solved) {
+            if (isHint && !slot.hintUsed) {
+                if (currentScore <= HINT_PENALTY) {
+                    return {
+                        error: `Немате доволно поени за хинт (потребни се над ${HINT_PENALTY} поени).`,
+                    };
+                }
+                slot.hintUsed = true;
+                slot.revealedHint = blank.hint;
+                hintsUsedCount += 1;
+            } else if (!isHint) {
+                if (correct) {
+                    slot.solved = true;
+                    slot.revealedAnswer = blank.answer;
+                } else {
+                    slot.wrongAttempts += 1;
+                    wrongGuessesCount += 1;
+                }
+            }
+        }
+
+        progress[blank.index] = slot;
+
+        const score = calculateSessionScore(wrongGuessesCount, hintsUsedCount);
+        const allSolved = challenge.blanks.every(
+            (b) => progress[b.index]?.solved === true,
+        );
+        const completed = allSolved || score === 0;
+        const won = allSolved && score > 0;
+
+        if (completed) {
+            revealCompletedProgress(challenge.blanks, progress);
+        }
+
+        if (completed && won && isTimeMachineSession) {
+            const finalTmCheck = await evaluateTimeMachineEligibility(
+                tx,
+                userId,
+                challenge.playDate,
+            );
+            if (!finalTmCheck.eligible) {
+                isTimeMachineSession = false;
+                isFreePlay = true;
+            }
+        }
+
+        await tx
+            .insert(gameSessions)
+            .values({
+                userId,
+                challengeId: challenge.id,
+                isFreePlay,
+                score,
+                wrongGuessesCount,
+                hintsUsedCount,
+                progress,
+                completed,
+                completedAt: completed ? new Date() : null,
+            })
+            .onConflictDoUpdate({
+                target: [gameSessions.userId, gameSessions.challengeId],
+                set: {
+                    score,
+                    wrongGuessesCount,
+                    hintsUsedCount,
+                    progress,
+                    completed,
+                    completedAt: completed ? new Date() : existing?.completedAt,
+                    isFreePlay,
+                },
+            });
+
+        if (completed && won && !isFreePlay) {
+            await awardDailyStreakAndPoints(
+                tx,
+                userId,
+                challenge.playDate,
+                score,
+                isTimeMachineSession,
+            );
+        }
+
+        return {
+            correct,
+            blankIndex: blank.index,
+            revealedAnswer: slot.solved || completed ? blank.answer : undefined,
+            revealedHint: slot.hintUsed || completed ? blank.hint : undefined,
+            score,
+            wrongGuessesCount,
+            hintsUsedCount,
+            completed,
+            won,
+            sourceUrl: completed ? challenge.sourceUrl : undefined,
+            originalTitle: completed ? challenge.originalTitle : undefined,
+            allAnswers: completed ? toAnswerMap(challenge.blanks) : undefined,
+        };
+    });
 }
 
 export async function syncAnonSessionToDb(
@@ -365,38 +412,34 @@ export async function syncAnonSessionToDb(
     const won = allSolved && score > 0;
 
     if (completed) {
-        for (const b of challenge.blanks) {
-            sanitizedProgress[b.index] = {
-                ...sanitizedProgress[b.index],
-                revealedAnswer: b.answer,
-                revealedHint: b.hint,
-            };
+        revealCompletedProgress(challenge.blanks, sanitizedProgress);
+    }
+
+    await db.transaction(async (tx) => {
+        const inserted = await tx
+            .insert(gameSessions)
+            .values({
+                userId,
+                challengeId: challenge.id,
+                isFreePlay: false,
+                score,
+                wrongGuessesCount: finalWrong,
+                hintsUsedCount: finalHints,
+                progress: sanitizedProgress,
+                completed,
+                completedAt: completed ? new Date() : null,
+            })
+            .onConflictDoNothing()
+            .returning({ id: gameSessions.id });
+
+        if (inserted.length > 0 && completed && won) {
+            await awardDailyStreakAndPoints(
+                tx,
+                userId,
+                challenge.playDate,
+                score,
+                false,
+            );
         }
-    }
-
-    const inserted = await db
-        .insert(gameSessions)
-        .values({
-            userId,
-            challengeId: challenge.id,
-            isFreePlay: false,
-            score,
-            wrongGuessesCount: finalWrong,
-            hintsUsedCount: finalHints,
-            progress: sanitizedProgress,
-            completed,
-            completedAt: completed ? new Date() : null,
-        })
-        .onConflictDoNothing()
-        .returning({ id: gameSessions.id });
-
-    if (inserted.length > 0 && completed && won) {
-        await awardDailyStreakAndPoints(
-            db,
-            userId,
-            challenge.playDate,
-            score,
-            false,
-        );
-    }
+    });
 }

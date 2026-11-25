@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
-import type { db as Db } from "../db";
+import type { Db } from "../db";
 import {
     type AiHeadlineProposal,
     dailyChallenges,
@@ -62,7 +62,10 @@ export async function getPendingStagedArticles(
               or(
                   ilike(stagedArticles.originalTitle, `%${cleanSearch}%`),
                   ilike(stagedArticles.sourceName, `%${cleanSearch}%`),
-                  sql`${stagedArticles.matchedKeywords}::text ILIKE ${`%${cleanSearch}%`}`,
+                  ilike(
+                      sql`${stagedArticles.matchedKeywords}::text`,
+                      `%${cleanSearch}%`,
+                  ),
               ),
           )
         : baseCondition;
@@ -185,17 +188,6 @@ export async function publishChallenge(
     },
 ) {
     return db.transaction(async (tx) => {
-        const [existingDate] = await tx
-            .select({ id: dailyChallenges.id })
-            .from(dailyChallenges)
-            .where(eq(dailyChallenges.playDate, input.playDate));
-
-        if (existingDate) {
-            throw new Error(
-                `Веќе постои одобрен предизвик за датумот ${input.playDate}. Одобрените предизвици не можат да се менуваат.`,
-            );
-        }
-
         if (input.stagedArticleId) {
             await tx
                 .update(stagedArticles)

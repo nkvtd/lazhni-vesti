@@ -26,4 +26,6 @@ export function dbPostgres() {
     return globalForDb.db;
 }
 
-export type db = ReturnType<typeof dbPostgres>;
+export type Db = ReturnType<typeof dbPostgres>;
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type DbOrTx = Db | Tx;

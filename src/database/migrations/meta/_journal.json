@@ -8,6 +8,13 @@
             "when": 1793359648744,
             "tag": "0000_watery_arclight",
             "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1795641466593,
+            "tag": "0001_cheerful_catseye",
+            "breakpoints": true
         }
     ]
 }

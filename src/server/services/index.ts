@@ -1,3 +1,4 @@
+import type { Db } from "../../database/drizzle/db";
 import { dbPostgres } from "../../database/drizzle/db";
 import { env } from "../env";
 import { LlmService } from "./llm.service";
@@ -5,7 +6,7 @@ import { ScraperService } from "./scraper.service";
 import { UsernameGeneratorService } from "./username-generator.service";
 
 export type Services = {
-    db: ReturnType<typeof dbPostgres>;
+    db: Db;
     llm: LlmService;
     scraper: ScraperService;
     usernameGenerator: UsernameGeneratorService;

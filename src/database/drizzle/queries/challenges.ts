@@ -1,8 +1,16 @@
 import { and, desc, eq, lt } from "drizzle-orm";
-import type { db as Db } from "../db";
-import { dailyChallenges, gameSessions, timeMachineLogs } from "../schema";
-import { evaluateTimeMachineEligibility } from "./gamification";
-import { getSkopjeDateString } from "./util";
+import type { Db } from "../db";
+import {
+    dailyChallenges,
+    gameSessions,
+    timeMachineLogs,
+    user,
+} from "../schema";
+import {
+    checkTimeMachineEligibilityPure,
+    evaluateTimeMachineEligibility,
+} from "./gamification";
+import { getSkopjeDateString, getStartOfMonth } from "./util";
 
 export async function getChallengeForClient(
     db: Db,
@@ -43,9 +51,14 @@ export async function getChallengeForClient(
         );
         canUseTimeMachine = tmCheck.eligible;
         timeMachineReason = tmCheck.reason;
+    } else if (isPastDate && session && !completed) {
+        canUseTimeMachine = !session.isFreePlay;
     }
 
-    const isFreePlay = isPastDate && !canUseTimeMachine;
+    const isFreePlay =
+        isPastDate && session
+            ? session.isFreePlay
+            : isPastDate && !canUseTimeMachine;
     const won =
         completed &&
         challenge.blanks.every(
@@ -98,37 +111,64 @@ export async function getArchiveChallenges(
         .orderBy(desc(dailyChallenges.playDate))
         .limit(limit);
 
-    const sessions = userId
-        ? await db
-              .select()
-              .from(gameSessions)
-              .where(eq(gameSessions.userId, userId))
-        : [];
+    const startOfMonth = getStartOfMonth();
+    const [userRows, sessionRows, tmRows] = userId
+        ? await Promise.all([
+              db
+                  .select({ totalPoints: user.totalPoints })
+                  .from(user)
+                  .where(eq(user.id, userId)),
+              db
+                  .select({
+                      session: gameSessions,
+                      playDate: dailyChallenges.playDate,
+                  })
+                  .from(gameSessions)
+                  .innerJoin(
+                      dailyChallenges,
+                      eq(gameSessions.challengeId, dailyChallenges.id),
+                  )
+                  .where(eq(gameSessions.userId, userId)),
+              db
+                  .select({
+                      targetDate: timeMachineLogs.targetDate,
+                      usedAt: timeMachineLogs.usedAt,
+                  })
+                  .from(timeMachineLogs)
+                  .where(eq(timeMachineLogs.userId, userId)),
+          ])
+        : [[], [], []];
 
-    const tmDates = userId
-        ? new Set(
-              (
-                  await db
-                      .select({ targetDate: timeMachineLogs.targetDate })
-                      .from(timeMachineLogs)
-                      .where(eq(timeMachineLogs.userId, userId))
-              ).map((r) => r.targetDate),
-          )
-        : new Set<string>();
-
-    const sessionByChallenge = new Map(sessions.map((s) => [s.challengeId, s]));
+    const userRow = userRows[0];
+    const sessionByChallenge = new Map(
+        sessionRows.map((r) => [r.session.challengeId, r.session]),
+    );
+    const tmDates = new Set(tmRows.map((r) => r.targetDate));
+    const usedThisMonth = tmRows.filter((r) => r.usedAt >= startOfMonth).length;
+    const wonDates = new Set<string>([
+        ...sessionRows
+            .filter(
+                (r) =>
+                    r.session.completed &&
+                    !r.session.isFreePlay &&
+                    r.session.score > 0,
+            )
+            .map((r) => r.playDate),
+        ...tmDates,
+    ]);
 
     const results = [];
     for (const c of challenges) {
         const s = sessionByChallenge.get(c.id);
         let canUseTimeMachine = false;
-        if (userId && !s) {
-            const tm = await evaluateTimeMachineEligibility(
-                db,
-                userId,
-                c.playDate,
-            );
-            canUseTimeMachine = tm.eligible;
+        if (userId && userRow && !s) {
+            canUseTimeMachine = checkTimeMachineEligibilityPure({
+                totalPoints: userRow.totalPoints,
+                usedThisMonth,
+                wonDates,
+                today,
+                playDate: c.playDate,
+            }).eligible;
         }
 
         results.push({

@@ -1,5 +1,5 @@
-import { and, count, eq, gte, sql } from "drizzle-orm";
-import type { db as Db } from "../db";
+import { and, count, eq, gt, gte } from "drizzle-orm";
+import type { DbOrTx } from "../db";
 import {
     badges,
     dailyChallenges,
@@ -8,7 +8,7 @@ import {
     user,
     usersToBadges,
 } from "../schema";
-import { getSkopjeDateString } from "./util";
+import { getSkopjeDateString, getStartOfMonth } from "./util";
 
 export const TIME_MACHINE_COST = 1500;
 export const TIME_MACHINE_MONTHLY_LIMIT = 2;
@@ -41,11 +41,11 @@ function getPreviousDateStr(dateStr: string): string {
     return d.toISOString().slice(0, 10);
 }
 
-async function ensureBadgesExist(db: Db) {
+async function ensureBadgesExist(db: DbOrTx) {
     const existing = await db.select().from(badges);
     if (existing.length > 0) return existing;
 
-    return db
+    await db
         .insert(badges)
         .values(
             STREAK_BADGES.map(({ name, description, icon }) => ({
@@ -54,11 +54,12 @@ async function ensureBadgesExist(db: Db) {
                 icon,
             })),
         )
-        .returning();
+        .onConflictDoNothing({ target: badges.name });
+    return db.select().from(badges);
 }
 
 export async function getUserWonDates(
-    db: Db,
+    db: DbOrTx,
     userId: string,
 ): Promise<Set<string>> {
     const rows = await db
@@ -73,7 +74,7 @@ export async function getUserWonDates(
                 eq(gameSessions.userId, userId),
                 eq(gameSessions.completed, true),
                 eq(gameSessions.isFreePlay, false),
-                sql`${gameSessions.score} > 0`,
+                gt(gameSessions.score, 0),
             ),
         );
 
@@ -86,6 +87,23 @@ export async function getUserWonDates(
         ...rows.map((r) => r.playDate),
         ...tmRows.map((r) => r.targetDate),
     ]);
+}
+
+export async function getMonthlyTimeMachineUsage(
+    db: DbOrTx,
+    userId: string,
+): Promise<number> {
+    const startOfMonth = getStartOfMonth();
+    const [tmUsage] = await db
+        .select({ count: count() })
+        .from(timeMachineLogs)
+        .where(
+            and(
+                eq(timeMachineLogs.userId, userId),
+                gte(timeMachineLogs.usedAt, startOfMonth),
+            ),
+        );
+    return Number(tmUsage?.count ?? 0);
 }
 
 export function computeActiveStreakFromDates(
@@ -111,32 +129,23 @@ export function computeActiveStreakFromDates(
     return streak;
 }
 
-export async function evaluateTimeMachineEligibility(
-    db: Db,
-    userId: string,
-    playDate: string,
-) {
-    const today = getSkopjeDateString();
+export function checkTimeMachineEligibilityPure({
+    totalPoints,
+    usedThisMonth,
+    wonDates,
+    today,
+    playDate,
+}: {
+    totalPoints: number;
+    usedThisMonth: number;
+    wonDates: Set<string>;
+    today: string;
+    playDate: string;
+}) {
     if (playDate >= today) {
         return { eligible: false, reason: "Не е архивски предизвик." };
     }
 
-    const [u] = await db.select().from(user).where(eq(user.id, userId));
-    if (!u) return { eligible: false, reason: "Корисникот не постои." };
-
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const [tmUsage] = await db
-        .select({ count: count() })
-        .from(timeMachineLogs)
-        .where(
-            and(
-                eq(timeMachineLogs.userId, userId),
-                gte(timeMachineLogs.usedAt, startOfMonth),
-            ),
-        );
-
-    const usedThisMonth = Number(tmUsage?.count ?? 0);
     if (usedThisMonth >= TIME_MACHINE_MONTHLY_LIMIT) {
         return {
             eligible: false,
@@ -144,14 +153,13 @@ export async function evaluateTimeMachineEligibility(
         };
     }
 
-    if (u.totalPoints < TIME_MACHINE_COST) {
+    if (totalPoints < TIME_MACHINE_COST) {
         return {
             eligible: false,
             reason: `Потребни се ${TIME_MACHINE_COST} поени за Time Machine.`,
         };
     }
 
-    const wonDates = await getUserWonDates(db, userId);
     if (wonDates.has(playDate)) {
         return { eligible: false, reason: "Веќе го имате освоено овој ден." };
     }
@@ -178,8 +186,29 @@ export async function evaluateTimeMachineEligibility(
     };
 }
 
+export async function evaluateTimeMachineEligibility(
+    db: DbOrTx,
+    userId: string,
+    playDate: string,
+) {
+    const [u] = await db.select().from(user).where(eq(user.id, userId));
+    if (!u) return { eligible: false, reason: "Корисникот не постои." };
+
+    const today = getSkopjeDateString();
+    const usedThisMonth = await getMonthlyTimeMachineUsage(db, userId);
+    const wonDates = await getUserWonDates(db, userId);
+
+    return checkTimeMachineEligibilityPure({
+        totalPoints: u.totalPoints,
+        usedThisMonth,
+        wonDates,
+        today,
+        playDate,
+    });
+}
+
 export async function awardDailyStreakAndPoints(
-    db: Db,
+    db: DbOrTx,
     userId: string,
     playDate: string,
     earnedScore: number,
@@ -240,21 +269,18 @@ export async function awardDailyStreakAndPoints(
 
     if (winsInMonth >= MONTHLY_BADGE_THRESHOLD) {
         const monthlyBadgeName = `Месечен Шампион (${yearMonth})`;
-        let [monthlyBadge] = await db
+        await db
+            .insert(badges)
+            .values({
+                name: monthlyBadgeName,
+                description: `Успешно решени ${MONTHLY_BADGE_THRESHOLD}+ наслови во ${yearMonth}.`,
+                icon: "calendar",
+            })
+            .onConflictDoNothing({ target: badges.name });
+        const [monthlyBadge] = await db
             .select()
             .from(badges)
             .where(eq(badges.name, monthlyBadgeName));
-
-        if (!monthlyBadge) {
-            [monthlyBadge] = await db
-                .insert(badges)
-                .values({
-                    name: monthlyBadgeName,
-                    description: `Успешно решени ${MONTHLY_BADGE_THRESHOLD}+ наслови во ${yearMonth}.`,
-                    icon: "calendar",
-                })
-                .returning();
-        }
 
         await db
             .insert(usersToBadges)
@@ -263,7 +289,7 @@ export async function awardDailyStreakAndPoints(
     }
 }
 
-export async function getUserAccountData(db: Db, userId: string) {
+export async function getUserAccountData(db: DbOrTx, userId: string) {
     await ensureBadgesExist(db);
 
     const userWithBadges = await db.query.user.findFirst({
@@ -277,20 +303,7 @@ export async function getUserAccountData(db: Db, userId: string) {
         },
     });
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const [tmUsage] = await db
-        .select({ count: count() })
-        .from(timeMachineLogs)
-        .where(
-            and(
-                eq(timeMachineLogs.userId, userId),
-                gte(timeMachineLogs.usedAt, startOfMonth),
-            ),
-        );
-
-    const usedThisMonth = Number(tmUsage?.count ?? 0);
+    const usedThisMonth = await getMonthlyTimeMachineUsage(db, userId);
 
     return {
         earnedBadges:

@@ -15,6 +15,7 @@ function getDatabase(_runtime?: RuntimeAdapter): BetterAuthOptions["database"] {
 export function getAuthConfig(runtime?: RuntimeAdapter): BetterAuthOptions {
     return {
         secret: env.BETTER_AUTH_SECRET,
+        baseURL: env.BETTER_AUTH_URL,
         database: getDatabase(runtime),
         emailAndPassword: {
             enabled: true,

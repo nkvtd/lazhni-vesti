@@ -9,6 +9,7 @@ import {
     updateStagedArticle,
     validateSingleWordBlanks,
 } from "../../database/drizzle/queries/staging";
+import { isValidDateString } from "../../database/drizzle/queries/util";
 import type {
     AiHeadlineProposal,
     HeadlineBlankItem,
@@ -20,6 +21,22 @@ function requireAdmin() {
         throw Abort("Само за администратори.");
     }
     return ctx;
+}
+
+function isUniqueViolation(err: unknown): boolean {
+    const code =
+        (err as { code?: string })?.code ??
+        (err as { cause?: { code?: string } })?.cause?.code;
+    return code === "23505";
+}
+
+function assertValidSuggestion(suggestion?: AiHeadlineProposal | null) {
+    if (!suggestion) return;
+    const err = validateSingleWordBlanks(
+        suggestion.templateTitle,
+        suggestion.blanks,
+    );
+    if (err) throw Abort(err);
 }
 
 export async function onTriggerScrape() {
@@ -43,14 +60,16 @@ export async function onCreateStagedArticle(input: {
     if (!input.originalTitle.trim() || !input.sourceUrl.trim()) {
         throw Abort("Насловот и линкот до изворот се задолжителни.");
     }
-    if (input.aiSuggestion) {
-        const err = validateSingleWordBlanks(
-            input.aiSuggestion.templateTitle,
-            input.aiSuggestion.blanks,
-        );
-        if (err) throw Abort(err);
+    assertValidSuggestion(input.aiSuggestion);
+
+    try {
+        return await createStagedArticle(db, input);
+    } catch (err: unknown) {
+        if (isUniqueViolation(err)) {
+            throw Abort("Вест со овој линк веќе постои во базата.");
+        }
+        throw err;
     }
-    return createStagedArticle(db, input);
 }
 
 export async function onUpdateStagedArticle(
@@ -64,17 +83,18 @@ export async function onUpdateStagedArticle(
     },
 ) {
     const { db } = requireAdmin();
-    if (input.aiSuggestion) {
-        const err = validateSingleWordBlanks(
-            input.aiSuggestion.templateTitle,
-            input.aiSuggestion.blanks,
-        );
-        if (err) throw Abort(err);
-    }
+    assertValidSuggestion(input.aiSuggestion);
 
-    const updated = await updateStagedArticle(db, stagedId, input);
-    if (!updated) throw Abort("Веста не е пронајдена.");
-    return updated;
+    try {
+        const updated = await updateStagedArticle(db, stagedId, input);
+        if (!updated) throw Abort("Веста не е пронајдена.");
+        return updated;
+    } catch (err: unknown) {
+        if (isUniqueViolation(err)) {
+            throw Abort("Вест со овој линк веќе постои во базата.");
+        }
+        throw err;
+    }
 }
 
 export async function onDeleteStagedArticle(stagedId: number) {
@@ -119,7 +139,7 @@ export async function onPublishChallenge(input: {
 }) {
     const { db } = requireAdmin();
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.playDate)) {
+    if (!isValidDateString(input.playDate)) {
         throw Abort("Невалиден датум.");
     }
 
@@ -134,8 +154,10 @@ export async function onPublishChallenge(input: {
     try {
         return await publishChallenge(db, input);
     } catch (err: unknown) {
-        if (err instanceof Error) {
-            throw Abort(err.message);
+        if (isUniqueViolation(err)) {
+            throw Abort(
+                `Веќе постои одобрен предизвик за датумот ${input.playDate}. Одобрените предизвици не можат да се менуваат.`,
+            );
         }
         throw err;
     }

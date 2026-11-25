@@ -12,6 +12,7 @@ export class LlmService {
         this.client = new OpenAI({
             apiKey: this.apiKey || "missing-key",
             baseURL,
+            timeout: 30_000,
             defaultHeaders: {
                 "User-Agent": "lazhni-vesti/1.0",
                 "x-opencode-session": "ses_lazhni_vesti_admin",
