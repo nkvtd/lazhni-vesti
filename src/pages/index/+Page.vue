@@ -1,8 +1,8 @@
 <template>
   <h1 class="sr-only">Дневниот предизвик</h1>
-  <div class="flex flex-1 items-center justify-center gap-8 py-4 xl:gap-10">
+  <div class="flex flex-1 flex-col items-center justify-start gap-6 py-4 xl:flex-row xl:items-center xl:justify-center xl:gap-10">
     <!-- Лев rail: правила -->
-    <aside class="hidden w-64 shrink-0 xl:block" aria-label="Како се игра">
+    <aside class="order-2 w-full max-w-xl shrink-0 xl:order-1 xl:w-64" aria-label="Како се игра">
       <div class="card p-5">
         <h2 class="font-display text-lg font-black text-ink">Како се игра</h2>
         <ul class="mt-4 space-y-3 text-sm text-ink-soft">
@@ -15,10 +15,10 @@
       </div>
     </aside>
 
-    <GamePlay class="w-full max-w-xl sm:max-w-2xl lg:max-w-3xl" :initial-challenge="data.challenge" />
+    <GamePlay class="order-1 w-full max-w-xl sm:max-w-2xl lg:max-w-3xl xl:order-2" :initial-challenge="data.challenge" />
 
     <!-- Десен rail: скор / гостин -->
-    <aside class="hidden w-64 shrink-0 xl:block" aria-label="Вашиот скор">
+    <aside class="order-3 w-full max-w-xl shrink-0 xl:w-64" aria-label="Вашиот скор">
       <div v-if="pageContext.user" class="card p-5">
         <h2 class="font-display text-lg font-black text-ink">Вашиот скор</h2>
         <dl class="mt-4 space-y-3">

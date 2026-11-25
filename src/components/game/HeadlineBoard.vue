@@ -8,7 +8,7 @@
       </span>
     </div>
 
-    <h2 class="mt-4 font-display text-2xl leading-[2.1] font-black text-ink sm:text-[2rem] lg:text-4xl">
+    <h2 class="mt-4 font-display text-xl leading-[2.1] font-black text-ink sm:text-2xl lg:text-[2rem] xl:text-4xl">
       <template v-for="(item, i) in renderList" :key="i">
         <span v-if="!item.isBlank">{{ item.text }}</span>
         <WordBlankSlot
