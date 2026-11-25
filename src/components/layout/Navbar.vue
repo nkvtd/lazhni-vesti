@@ -1,9 +1,9 @@
 <template>
   <header class="sticky top-0 z-40 border-b-2 border-ink bg-paper">
-    <div class="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3">
-      <a href="/" class="flex items-center gap-2"><span class="flex size-7 items-center justify-center rounded-md border-2 border-ink bg-accent font-display text-base font-black text-white shadow-hard-sm" aria-hidden="true">?</span><span class="font-display text-2xl font-black tracking-tight text-ink">Лажни вести<span class="text-accent">?</span></span></a>
+    <div class="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3 px-4 py-3">
+      <a href="/" class="flex items-center gap-2 whitespace-nowrap"><span class="flex size-7 items-center justify-center rounded-md border-2 border-ink bg-accent font-display text-base font-black text-white shadow-hard-sm" aria-hidden="true">?</span><span class="font-display text-2xl font-black tracking-tight text-ink">Лажни вести<span class="text-accent">?</span></span></a>
 
-      <nav class="flex items-center gap-1.5" aria-label="Главно мени">
+      <nav class="hidden items-center gap-1.5 md:flex" aria-label="Главно мени">
         <a href="/" :class="linkClass('/')" :aria-current="isActive('/') ? 'page' : undefined">Игра</a>
         <a href="/archive" :class="linkClass('/archive')" :aria-current="isActive('/archive') ? 'page' : undefined">Архива</a>
         <a href="/leaderboard" :class="linkClass('/leaderboard')" :aria-current="isActive('/leaderboard') ? 'page' : undefined">
@@ -36,22 +36,66 @@
             </svg>
             {{ pageContext.user.currentStreak }}
           </span>
-          <a href="/account" class="max-w-32 truncate text-sm text-ink-soft hover:text-ink">{{ pageContext.user.name }}</a>
+          <a href="/account" class="hidden max-w-32 truncate text-sm text-ink-soft hover:text-ink sm:inline">{{ pageContext.user.name }}</a>
         </template>
         <template v-else>
-          <a href="/login" class="text-sm text-ink-soft hover:text-ink">Најава</a>
-          <a href="/signup" class="btn btn-primary btn-sm">Регистрација</a>
+          <a href="/login" class="hidden text-sm text-ink-soft hover:text-ink md:inline">Најава</a>
+          <a href="/signup" class="btn btn-primary btn-sm hidden md:inline-flex">Регистрација</a>
         </template>
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm md:hidden"
+          :aria-expanded="menuOpen"
+          aria-controls="main-menu"
+          aria-label="Главно мени"
+          @click="menuOpen = !menuOpen"
+        >
+          <svg v-if="!menuOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
       </div>
     </div>
+
+    <nav id="main-menu" v-show="menuOpen" class="border-t-2 border-ink/10 bg-paper md:hidden" aria-label="Главно мени">
+      <div class="mx-auto flex w-full max-w-[1400px] flex-col gap-1 px-4 py-3">
+        <a href="/" :class="mobileLinkClass('/')" :aria-current="isActive('/') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Игра</a>
+        <a href="/archive" :class="mobileLinkClass('/archive')" :aria-current="isActive('/archive') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Архива</a>
+        <a href="/leaderboard" :class="mobileLinkClass('/leaderboard')" :aria-current="isActive('/leaderboard') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Рангирање</a>
+        <a v-if="pageContext.user?.role === 'admin'" href="/admin" :class="mobileLinkClass('/admin')" :aria-current="isActive('/admin') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Админ</a>
+        <hr class="my-1 border-ink/10" />
+        <template v-if="!pageContext.user">
+          <a href="/login" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Најава</a>
+          <a href="/signup" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Регистрација</a>
+        </template>
+        <a v-else href="/account" class="rounded-md px-3 py-2 text-sm font-bold text-ink-soft hover:bg-accent-soft hover:text-ink" @click="menuOpen = false">Мој профил</a>
+      </div>
+    </nav>
   </header>
 </template>
 
 <script setup lang="ts">
 // biome-ignore lint/style/useVueMultiWordComponentNames: "Navbar" is the established name
 import { usePageContext } from "vike-vue/usePageContext";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 const pageContext = usePageContext();
+
+const menuOpen = ref(false);
+
+// Close the menu on client-side navigation.
+watch(
+    () => pageContext.urlPathname,
+    () => {
+        menuOpen.value = false;
+    },
+);
+
+function onKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") menuOpen.value = false;
+}
+
+onMounted(() => document.addEventListener("keydown", onKeydown));
+onBeforeUnmount(() => document.removeEventListener("keydown", onKeydown));
 
 const isActive = (href: string) =>
     href === "/"
@@ -62,4 +106,9 @@ const linkClass = (href: string) =>
     isActive(href)
         ? "rounded-md border-2 border-ink bg-accent px-2.5 py-0.5 text-sm font-bold text-white shadow-hard-sm"
         : "rounded-md border-2 border-transparent px-2.5 py-0.5 text-sm font-bold text-ink-soft hover:border-ink/30 hover:text-ink";
+
+const mobileLinkClass = (href: string) =>
+    isActive(href)
+        ? "bg-accent text-white"
+        : "text-ink-soft hover:bg-accent-soft hover:text-ink";
 </script>

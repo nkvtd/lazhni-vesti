@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-    <span class="font-display text-xl font-black tabular-nums text-amber-400">{{ score }}<span class="ml-1 font-sans text-[11px] font-normal text-paper/70">п.</span></span>
+    <span class="font-display text-lg font-black tabular-nums text-amber-400 sm:text-xl">{{ score }}<span class="ml-1 font-sans text-[11px] font-normal text-paper/70">п.</span></span>
     <span class="inline-flex items-center gap-1 text-xs font-bold text-paper/85">
       <svg
         xmlns="http://www.w3.org/2000/svg"
