@@ -3,7 +3,7 @@ services:
         container_name: lv-app
         image: ghcr.io/nkvtd/lazhni-vesti:latest
         ports:
-            - "${PORT:-3000}:3000"
+            - "127.0.0.1:${PORT:-3000}:3000"
         environment:
             - NODE_ENV=production
             - PORT=3000
@@ -18,6 +18,11 @@ services:
             postgres:
                 condition: service_healthy
         restart: unless-stopped
+        networks:
+            - default
+            - edge-proxy
+        labels:
+            - "com.centurylinklabs.watchtower.enable=true"
 
     postgres:
         container_name: lv-postgres
