@@ -1,6 +1,6 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import type { db as Db } from "../db";
-import { dailyChallenges, gameSessions } from "../schema";
+import { dailyChallenges, gameSessions, timeMachineLogs } from "../schema";
 import { evaluateTimeMachineEligibility } from "./gamification";
 import { getSkopjeDateString } from "./util";
 
@@ -105,6 +105,17 @@ export async function getArchiveChallenges(
               .where(eq(gameSessions.userId, userId))
         : [];
 
+    const tmDates = userId
+        ? new Set(
+              (
+                  await db
+                      .select({ targetDate: timeMachineLogs.targetDate })
+                      .from(timeMachineLogs)
+                      .where(eq(timeMachineLogs.userId, userId))
+              ).map((r) => r.targetDate),
+          )
+        : new Set<string>();
+
     const sessionByChallenge = new Map(sessions.map((s) => [s.challengeId, s]));
 
     const results = [];
@@ -129,6 +140,7 @@ export async function getArchiveChallenges(
             score: s?.completed ? s.score : null,
             isFreePlay: s ? s.isFreePlay : !canUseTimeMachine,
             canUseTimeMachine,
+            usedTimeMachine: tmDates.has(c.playDate),
         });
     }
 
