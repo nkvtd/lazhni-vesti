@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 import type { Db } from "../db";
 import {
     dailyChallenges,
@@ -107,7 +107,7 @@ export async function getArchiveChallenges(
     const challenges = await db
         .select()
         .from(dailyChallenges)
-        .where(lt(dailyChallenges.playDate, today))
+        .where(lte(dailyChallenges.playDate, today))
         .orderBy(desc(dailyChallenges.playDate))
         .limit(limit);
 

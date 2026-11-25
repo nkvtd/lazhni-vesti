@@ -15,7 +15,7 @@
       </div>
     </aside>
 
-    <GamePlay class="order-1 w-full max-w-xl sm:max-w-2xl lg:max-w-3xl xl:order-2" :initial-challenge="data.challenge" />
+    <GamePlay :key="data.challenge?.playDate ?? 'empty'" class="order-1 w-full max-w-xl sm:max-w-2xl lg:max-w-3xl xl:order-2" :initial-challenge="data.challenge" />
 
     <!-- Десен rail: скор / гостин -->
     <aside class="order-3 w-full max-w-xl shrink-0 xl:w-64" aria-label="Вашиот скор">

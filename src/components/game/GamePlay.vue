@@ -9,7 +9,9 @@
       <div class="w-full">
         <div class="card overflow-hidden">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink bg-ink px-4 py-2.5">
-            <p class="font-display text-sm font-black tracking-tight text-paper">ЛАЖНИ ВЕСТИ<span class="text-amber-400">?</span></p>
+            <span class="inline-flex items-center rounded-md bg-paper px-1.5 py-1">
+              <img src="/assets/lv-logo.svg" alt="Лажни вести?" class="h-5 w-auto" />
+            </span>
             <ScoreHud
               :score="challenge.score"
               :wrong-guesses="challenge.wrongGuessesCount"
@@ -52,6 +54,11 @@
               </div>
             </div>
 
+            <div v-else class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t-2 border-ink/10 pt-4">
+              <p class="text-sm font-bold text-ink">{{ challenge.won ? "Решено" : "Не е решено" }} · {{ challenge.score }}/1000</p>
+              <button type="button" class="btn btn-secondary btn-sm" @click="showSummary = true">Прикажи резултат</button>
+            </div>
+
             <p v-if="wrongFeedback" role="status" class="mt-2 text-sm font-medium text-wrong">Не е тоа — обидете се повторно.</p>
             <p v-if="error" role="alert" class="mt-2 text-sm font-medium text-wrong">{{ error }}</p>
             <div v-if="activeHintText" class="mt-3 rounded-r-lg border-l-4 border-amber-500 bg-amber-100 px-3 py-2 text-sm font-medium text-ink">
@@ -76,12 +83,13 @@
       :hints-used="challenge.hintsUsedCount"
       :is-archive="isArchive"
       :tm-active="isArchive && challenge.canUseTimeMachine"
-      @close="showSummary = false"
+      @close="onSummaryClose"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import { reload } from "vike/client/router";
 import { usePageContext } from "vike-vue/usePageContext";
 import {
     computed,
@@ -132,6 +140,7 @@ const activeBlankObj = computed(
 const canHint = computed(
     () =>
         Boolean(challenge.value && !challenge.value.completed) &&
+        (challenge.value?.score ?? 0) > 250 &&
         activeBlankObj.value !== null &&
         !activeBlankObj.value.solved &&
         !activeBlankObj.value.hintUsed,
@@ -153,6 +162,7 @@ function focusBlankInput(index: number) {
 
 async function onGuess(blankIndex: number, word: string) {
     error.value = null;
+    wrongFeedback.value = false;
     if (!word) return;
     try {
         const correct = await submitGuess(blankIndex, word);
@@ -177,8 +187,10 @@ async function onGuess(blankIndex: number, word: string) {
 
 async function onHint(blankIndex: number) {
     error.value = null;
+    wrongFeedback.value = false;
     try {
         await unlockHint(blankIndex);
+        if (activeBlank.value !== null) focusBlankInput(activeBlank.value);
     } catch (e) {
         error.value = errMessage(e);
     }
@@ -199,6 +211,24 @@ function submitActive() {
 const seenKey = computed(() =>
     challenge.value ? `lv_summary_seen_${challenge.value.playDate}` : "",
 );
+const statsKey = computed(() =>
+    challenge.value ? `lv_stats_refreshed_${challenge.value.playDate}` : "",
+);
+
+function onSummaryClose() {
+    showSummary.value = false;
+    if (
+        statsKey.value &&
+        !localStorage.getItem(statsKey.value) &&
+        challenge.value?.completed &&
+        challenge.value.won &&
+        !challenge.value.isFreePlay &&
+        pageContext.user
+    ) {
+        localStorage.setItem(statsKey.value, "1");
+        reload(); // re-fetch pageContext.user; completed board re-renders solved from DB
+    }
+}
 
 function markSeen() {
     if (seenKey.value) localStorage.setItem(seenKey.value, "1");
@@ -224,7 +254,9 @@ onBeforeUnmount(() => clearTimeout(feedbackTimer));
 watch(
     () => challenge.value?.completed,
     (done) => {
-        if (done) {
+        if (!done) return;
+        activeBlank.value = null;
+        if (!localStorage.getItem(seenKey.value)) {
             showSummary.value = true;
             markSeen();
         }

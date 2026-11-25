@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" @click.self="$emit('close')">
-    <div role="dialog" aria-modal="true" aria-labelledby="game-summary-title" class="card my-8 w-full max-w-sm overflow-hidden">
+  <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 sm:items-center" @click.self="$emit('close')">
+    <div role="dialog" aria-modal="true" aria-labelledby="game-summary-title" class="card my-auto w-full max-w-sm overflow-hidden">
       <div class="border-b-2 border-ink px-6 py-4 text-center" :class="won ? 'bg-accent text-white' : 'bg-ink text-paper'">
         <h2 id="game-summary-title" class="font-display text-2xl font-black">
           {{ won ? "Го погодивте насловот!" : isArchive ? "Крај на архивскиот предизвик" : "Крај на дневниот предизвик" }}
@@ -95,6 +95,7 @@
           </svg>
           {{ copied ? "Копирано!" : "Сподели резултат" }}
         </button>
+        <p v-if="copyFailed" role="alert" class="mt-2 text-sm font-medium text-wrong">Копирањето не успеа — обидете се рачно.</p>
 
         <button ref="closeBtn" type="button" class="btn btn-secondary mt-2 w-full" @click="$emit('close')">Затвори</button>
       </div>
@@ -130,17 +131,22 @@ const emit = defineEmits<{
 
 const closeBtn = ref<HTMLButtonElement | null>(null);
 const copied = ref(false);
+const copyFailed = ref(false);
 let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+let copyFailedTimer: ReturnType<typeof setTimeout> | undefined;
 
 async function copyResult() {
     const text = `Лажни вести? · ${formatMkDate(playDate)} · ${score}/1000 поени`;
     try {
         await navigator.clipboard.writeText(text);
         copied.value = true;
+        copyFailed.value = false;
         clearTimeout(copiedTimer);
         copiedTimer = setTimeout(() => (copied.value = false), 2500);
     } catch {
-        /* clipboard unavailable — keep button in default state */
+        copyFailed.value = true;
+        clearTimeout(copyFailedTimer);
+        copyFailedTimer = setTimeout(() => (copyFailed.value = false), 2500);
     }
 }
 
@@ -157,6 +163,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     document.removeEventListener("keydown", onKeydown);
     clearTimeout(copiedTimer);
+    clearTimeout(copyFailedTimer);
     copied.value = false;
+    copyFailed.value = false;
 });
 </script>

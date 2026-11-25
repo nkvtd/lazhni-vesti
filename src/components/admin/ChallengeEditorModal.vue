@@ -1,5 +1,5 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4" @click.self="emit('close')">
+  <div v-if="open" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4" @click.self="requestClose">
     <div role="dialog" aria-modal="true" aria-labelledby="challenge-editor-title" class="card my-8 w-full max-w-2xl p-5 sm:p-6">
       <h2 id="challenge-editor-title" class="font-display text-xl font-bold">{{ article ? "Уреди вест" : "Нова вест" }}</h2>
 
@@ -71,7 +71,7 @@
         <span class="flex-1" />
         <button type="button" class="btn btn-secondary" :disabled="anyBusy" @click="save">Зачувај</button>
         <button type="button" class="btn btn-primary" :disabled="anyBusy" @click="publish">Објави предизвик</button>
-        <button type="button" class="btn btn-secondary" @click="emit('close')">Откажи</button>
+        <button type="button" class="btn btn-secondary" :disabled="anyBusy" @click="requestClose">Откажи</button>
       </div>
     </div>
   </div>
@@ -153,7 +153,11 @@ watch(
 );
 
 function onKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape" && props.open) emit("close");
+    if (e.key === "Escape" && props.open) requestClose();
+}
+
+function requestClose() {
+    if (!anyBusy.value) emit("close");
 }
 
 onMounted(() => window.addEventListener("keydown", onKeydown));
@@ -180,6 +184,16 @@ async function generateAi() {
             answer: b.answer,
             hint: b.hint,
         }));
+        if (props.article) {
+            // The telefunc already persisted the proposal; keep the parent queue in sync.
+            emit("saved", {
+                ...props.article,
+                aiSuggestion: {
+                    templateTitle: proposal.templateTitle,
+                    blanks: proposal.blanks,
+                },
+            });
+        }
     } catch (e) {
         error.value = errMessage(e);
     } finally {
@@ -203,11 +217,23 @@ function buildSuggestion() {
     };
 }
 
+function hasAnyDraftInput() {
+    return Boolean(
+        templateTitle.value.trim() ||
+            blanks.value.some((b) => b.answer.trim() || b.hint.trim()),
+    );
+}
+
 async function save() {
     error.value = null;
     saveBusy.value = true;
     try {
         const aiSuggestion = buildSuggestion();
+        if (!aiSuggestion && hasAnyDraftInput()) {
+            error.value =
+                "Пополнете ги сите одговори и хинтови — или исчистете ги сите полиња.";
+            return;
+        }
         const fields = {
             originalTitle: originalTitle.value,
             sourceName: sourceName.value,

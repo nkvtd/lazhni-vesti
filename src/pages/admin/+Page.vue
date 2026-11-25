@@ -41,12 +41,28 @@
     <h2 class="border-b-2 border-ink pb-1 font-display text-xl font-bold">Закажани и објавени предизвици</h2>
     <p v-if="!upcoming.length" class="mt-4 text-sm text-ink-soft">Сè уште нема закажани предизвици.</p>
     <ul v-else class="mt-4 divide-y divide-ink/10 rounded-lg border border-ink/10 bg-card shadow-sm">
-      <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-3 px-4 py-3">
-        <span class="min-w-0">
-          <span class="block text-sm font-medium text-ink">{{ formatMkDate(c.playDate) }} · {{ c.sourceName }}</span>
-          <span class="block truncate text-xs text-ink-soft">{{ c.originalTitle }}</span>
-        </span>
-        <span class="chip shrink-0">{{ c.blanks.length }} збора</span>
+      <li v-for="c in upcoming" :key="c.id" class="px-4 py-2">
+        <details class="group">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 py-1 [&::-webkit-details-marker]:hidden">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-ink">{{ formatMkDate(c.playDate) }} · {{ c.sourceName }}</span>
+              <span class="block truncate text-xs text-ink-soft">{{ c.originalTitle }}</span>
+            </span>
+            <span class="chip shrink-0">{{ c.blanks.length }} збора</span>
+          </summary>
+          <div class="mt-2 space-y-1 border-t-2 border-ink/10 pt-2 text-xs text-ink-soft">
+            <p><span class="font-bold text-ink">Шаблон:</span> {{ c.templateTitle }}</p>
+            <p>
+              <span class="font-bold text-ink">Извор:</span>
+              <a :href="c.sourceUrl" target="_blank" rel="noopener noreferrer" class="text-accent hover:text-accent-strong">{{ c.sourceUrl }}</a>
+            </p>
+            <p v-for="b in c.blanks" :key="b.index" class="flex flex-wrap gap-2">
+              <span class="chip">Збор {{ b.index + 1 }}</span>
+              <span class="font-bold text-ink">{{ b.answer }}</span>
+              <span>— {{ b.hint }}</span>
+            </p>
+          </div>
+        </details>
       </li>
     </ul>
   </section>
@@ -94,13 +110,16 @@ const editorArticle = ref<Staged | null>(null);
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+let searchSeq = 0;
 
 async function runSearch() {
     pageError.value = null;
+    const seq = ++searchSeq;
     try {
-        staged.value = await onSearchStagedArticles(searchQuery.value);
+        const results = await onSearchStagedArticles(searchQuery.value);
+        if (seq === searchSeq) staged.value = results;
     } catch (e) {
-        pageError.value = errMessage(e);
+        if (seq === searchSeq) pageError.value = errMessage(e);
     }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import type { Data } from "../../pages/archive/index/+data";
 import { formatMkDate } from "../../utils/format";
 
@@ -114,7 +114,7 @@ function colorClass(item: HeatItem): string {
         case "free":
             return "bg-accent-soft";
         case "lost":
-            return "bg-ink/20";
+            return "bg-wrong/40";
         case "unsolved":
             return "bg-ink/20";
         default:
@@ -140,11 +140,18 @@ function tipOf(item: HeatItem): string {
             return date;
     }
 }
+
+const scrollEl = ref<HTMLDivElement | null>(null);
+
+onMounted(() => {
+    const el = scrollEl.value;
+    if (el) el.scrollLeft = el.scrollWidth; // land on the latest weeks on mobile
+});
 </script>
 
 <template>
   <div>
-    <div class="overflow-x-auto pb-1">
+    <div ref="scrollEl" class="overflow-x-auto pb-1">
       <div class="flex items-start gap-1.5" style="width: max-content">
         <!-- weekday labels: grid aligned to the 7 day-rows -->
         <div class="grid gap-[2px] pt-4 text-[9px] leading-[11px] text-ink-soft" style="grid-template-rows: repeat(7, 11px)" aria-hidden="true">
@@ -174,6 +181,7 @@ function tipOf(item: HeatItem): string {
       <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-amber-400" aria-hidden="true" />Time Machine</span>
       <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-accent-soft" aria-hidden="true" />Слободна игра</span>
       <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-ink/20" aria-hidden="true" />Неиграно</span>
+      <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-wrong/40" aria-hidden="true" />Не е решено</span>
       <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-ink/[0.04]" aria-hidden="true" />Нема предизвик</span>
     </div>
   </div>
