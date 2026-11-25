@@ -3,6 +3,13 @@
   <h1 class="font-display text-3xl font-black tracking-tight text-ink">Архива</h1>
   <p class="mt-1 text-sm text-ink-soft">Изминати предизвици — играте за забава или со Time Machine.</p>
 
+  <div class="card mt-6 p-4 sm:p-5">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="font-display text-xl font-bold">Активност за 12 месеци</h2>
+    </div>
+    <ActivityHeatmap class="mt-3" :items="data.items" :today="data.today" />
+  </div>
+
   <div v-if="data.items.length === 0" class="card mt-6 p-8 text-center text-sm font-bold text-ink-soft">
     Сè уште нема архивирани предизвици.
   </div>
@@ -14,7 +21,8 @@
           <span class="block text-sm font-bold text-ink">{{ formatMkDate(item.playDate) }}</span>
           <span class="block truncate text-xs text-ink-soft">{{ item.sourceName }} · {{ item.blanksCount }} збора</span>
         </span>
-        <span v-if="item.completed" class="chip shrink-0 border-ink bg-accent text-white shadow-hard-sm">Решено · {{ item.score }} п.</span>
+        <span v-if="item.completed && item.usedTimeMachine" class="chip shrink-0 border-ink bg-amber-400 text-ink shadow-hard-sm">Time Machine · {{ item.score }} п.</span>
+        <span v-else-if="item.completed" class="chip shrink-0 border-ink bg-accent text-white shadow-hard-sm">Решено · {{ item.score }} п.</span>
         <span v-else-if="item.canUseTimeMachine" class="chip shrink-0 border-ink bg-amber-400 text-ink shadow-hard-sm">Time Machine</span>
         <span v-else class="chip shrink-0">Неиграно</span>
       </a>
@@ -25,6 +33,8 @@
 
 <script setup lang="ts">
 import { useData } from "vike-vue/useData";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import ActivityHeatmap from "../../../components/archive/ActivityHeatmap.vue";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatMkDate } from "../../../utils/format";
 import type { Data } from "./+data";
