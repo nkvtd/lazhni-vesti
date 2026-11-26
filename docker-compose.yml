@@ -12,7 +12,7 @@ services:
             - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
             - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
             - OPENAI_API_KEY=${OPENAI_API_KEY}
-            - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-lv-db}
+            - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lv-db}
             - TZ=Europe/Skopje
         depends_on:
             postgres:
