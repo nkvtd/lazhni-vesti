@@ -27,7 +27,7 @@
         "drizzle-kit": "^0.31.11",
         "drizzle-orm": "^0.45.4",
         "hono": "^4.13.14",
-        "openai": "^7.45.1",
+        "openai": "^7.47.0",
         "postgres": "^3.4.9",
         "telefunc": "^0.3.0",
         "vike": "^0.4.268",
