@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-sm">
     <div class="flex items-center gap-3">
-      <img src="/assets/lv-logo.svg" alt="" aria-hidden="true" class="h-11 w-auto shrink-0" />
+      <img src="/assets/lv_logo.svg" alt="" aria-hidden="true" class="h-11 w-auto shrink-0" />
       <h1 class="font-display text-3xl font-black tracking-tight">Најава</h1>
     </div>
     <p class="mt-2 text-sm text-ink-soft">Најавете се за да го чувате скорот и дневната серија.</p>
@@ -74,7 +74,6 @@ const onSubmit = async () => {
             );
             return;
         }
-        // Full reload so SSR re-hydrates pageContext.user and guest progress syncs.
         window.location.href = "/";
     } catch {
         error.value = "Неуспешна најава — проверете ја врската.";

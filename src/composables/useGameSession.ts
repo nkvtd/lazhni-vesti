@@ -75,8 +75,6 @@ export function useGameSession(initialChallenge: ClientChallenge | null) {
                     localStorage.removeItem(storageKey.value);
                     window.location.reload();
                 } else {
-                    // Guest progress on a past date can never be synced (backend only
-                    // accepts today's challenge) — clear the stale key without reloading.
                     localStorage.removeItem(storageKey.value);
                 }
             } else {

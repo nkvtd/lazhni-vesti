@@ -10,7 +10,7 @@
         <div class="card overflow-hidden">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink bg-ink px-4 py-2.5">
             <span class="inline-flex items-center rounded-md bg-paper px-1.5 py-1">
-              <img src="/assets/lv-logo.svg" alt="Лажни вести?" class="h-5 w-auto" />
+              <img src="/assets/lv_logo.svg" alt="Лажни вести?" class="h-5 w-auto" />
             </span>
             <ScoreHud
               :score="challenge.score"

@@ -55,10 +55,18 @@ export async function onCreateStagedArticle(input: {
     sourceUrl: string;
     matchedKeywords?: string[];
     aiSuggestion?: AiHeadlineProposal | null;
+    playDate?: string | null;
 }) {
     const { db } = requireAdmin();
     if (!input.originalTitle.trim() || !input.sourceUrl.trim()) {
         throw Abort("Насловот и линкот до изворот се задолжителни.");
+    }
+    if (
+        typeof input.playDate === "string" &&
+        input.playDate &&
+        !isValidDateString(input.playDate)
+    ) {
+        throw Abort("Невалиден датум.");
     }
     assertValidSuggestion(input.aiSuggestion);
 
@@ -80,9 +88,17 @@ export async function onUpdateStagedArticle(
         sourceUrl?: string;
         matchedKeywords?: string[];
         aiSuggestion?: AiHeadlineProposal | null;
+        playDate?: string | null;
     },
 ) {
     const { db } = requireAdmin();
+    if (
+        typeof input.playDate === "string" &&
+        input.playDate &&
+        !isValidDateString(input.playDate)
+    ) {
+        throw Abort("Невалиден датум.");
+    }
     assertValidSuggestion(input.aiSuggestion);
 
     try {

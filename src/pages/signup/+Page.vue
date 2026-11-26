@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-sm">
     <div class="flex items-center gap-3">
-      <img src="/assets/lv-logo.svg" alt="" aria-hidden="true" class="h-11 w-auto shrink-0" />
+      <img src="/assets/lv_logo.svg" alt="" aria-hidden="true" class="h-11 w-auto shrink-0" />
       <h1 class="font-display text-3xl font-black tracking-tight">Регистрација</h1>
     </div>
     <p class="mt-2 text-sm text-ink-soft">Создадете сметка и зачувајте го секој погоден наслов.</p>
@@ -10,7 +10,7 @@
       <div>
         <label class="label" for="name">Име</label>
         <input id="name" v-model="name" class="input" type="text" autocomplete="name" maxlength="30" />
-        <p class="mt-1 text-xs text-ink-soft">Оставете празно за автоматски генерирано име.</p>
+        <p class="mt-1 text-xs text-ink-soft">Предложено е автоматски генерирано име — можете да го измените или да го оставите како што е.</p>
       </div>
       <div>
         <label class="label" for="email">Е-пошта</label>
@@ -42,7 +42,9 @@
 
 <script lang="ts" setup>
 import { createAuthClient } from "better-auth/vue";
+import { useData } from "vike-vue/useData";
 import { ref } from "vue";
+import type { Data } from "./+data";
 
 const AUTH_ERRORS: Record<string, string> = {
     INVALID_EMAIL_OR_PASSWORD: "Погрешна е-пошта или лозинка.",
@@ -60,7 +62,8 @@ function authErrorMessage(
 }
 
 const authClient = createAuthClient();
-const name = ref("");
+const data = useData<Data>();
+const name = ref(data.suggestedName);
 const email = ref("");
 const password = ref("");
 const error = ref<string | null>(null);
@@ -83,7 +86,6 @@ const onSubmit = async () => {
             );
             return;
         }
-        // Full reload so SSR re-hydrates pageContext.user and guest progress syncs.
         window.location.href = "/";
     } catch {
         error.value = "Неуспешна регистрација — проверете ја врската.";

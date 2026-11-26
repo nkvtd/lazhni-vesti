@@ -2,7 +2,7 @@
   <footer class="mt-8 border-t-2 border-ink bg-card">
     <div class="mx-auto w-full max-w-[1400px] px-4 py-6">
       <div class="rule-double" aria-hidden="true"></div>
-      <img src="/assets/lv-logo.svg" alt="" aria-hidden="true" class="mt-4 block h-7 w-auto mx-auto sm:mx-0" />
+      <img src="/assets/lv_logo.svg" alt="" aria-hidden="true" class="mt-4 block h-7 w-auto mx-auto sm:mx-0" />
       <div class="mt-3 flex flex-col gap-3 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
         <p class="text-xs text-ink-soft">Лажни вести? — сатира врз вистински наслови од македонските портали.</p>
         <nav class="flex items-center justify-center gap-4 text-xs" aria-label="Мени во подножје">

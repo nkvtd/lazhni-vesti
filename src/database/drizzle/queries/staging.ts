@@ -94,6 +94,7 @@ export async function createStagedArticle(
         sourceUrl: string;
         matchedKeywords?: string[];
         aiSuggestion?: AiHeadlineProposal | null;
+        playDate?: string | null;
     },
 ) {
     const [inserted] = await db
@@ -104,6 +105,7 @@ export async function createStagedArticle(
             sourceUrl: input.sourceUrl.trim(),
             matchedKeywords: input.matchedKeywords ?? [],
             aiSuggestion: input.aiSuggestion ?? null,
+            playDate: input.playDate || null,
             status: "pending",
         })
         .returning();
@@ -119,6 +121,7 @@ export async function updateStagedArticle(
         sourceUrl?: string;
         matchedKeywords?: string[];
         aiSuggestion?: AiHeadlineProposal | null;
+        playDate?: string | null;
     },
 ) {
     const [updated] = await db
@@ -138,6 +141,9 @@ export async function updateStagedArticle(
                 : {}),
             ...(input.aiSuggestion !== undefined
                 ? { aiSuggestion: input.aiSuggestion }
+                : {}),
+            ...(input.playDate !== undefined
+                ? { playDate: input.playDate || null }
                 : {}),
         })
         .where(eq(stagedArticles.id, id))

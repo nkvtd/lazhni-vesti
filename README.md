@@ -1,6 +1,6 @@
 <div align="center">
   <br />
-  <img src="assets/lv_logo.svg" alt="Лажни вести? logo" width="360" />
+  <img src="public/assets/lv_logo.svg" alt="Лажни вести? logo" width="360" />
   <br /><br />
 
   <p align="center">
@@ -289,8 +289,9 @@ On container startup, `lv-app` waits for `lv-postgres` to become healthy, automa
 
 ```text
 lazhni-vesti/
-├── assets/
-│   └── lv_logo.svg                   # Project logo
+├── public/
+│   └── assets/
+│       └── lv_logo.svg                         # Project logo
 ├── src/
 │   ├── components/
 │   │   ├── admin/                    # ChallengeEditorModal, StagedArticleRow

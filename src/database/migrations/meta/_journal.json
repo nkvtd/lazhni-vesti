@@ -15,6 +15,13 @@
             "when": 1795641466593,
             "tag": "0001_cheerful_catseye",
             "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1795658690901,
+            "tag": "0002_cloudy_franklin_storm",
+            "breakpoints": true
         }
     ]
 }

@@ -46,12 +46,11 @@ function addDays(dateStr: string, n: number): string {
 }
 
 function isoDow(dateStr: string): number {
-    return (toUtc(dateStr).getUTCDay() + 6) % 7; // 0 = Monday
+    return (toUtc(dateStr).getUTCDay() + 6) % 7;
 }
 
 const byDate = computed(() => new Map(props.items.map((i) => [i.playDate, i])));
 
-// grid start: 52 weeks back, aligned back to Monday
 const startDate = computed(() => {
     let s = addDays(props.today, -52 * 7);
     const dow = isoDow(s);
@@ -145,7 +144,7 @@ const scrollEl = ref<HTMLDivElement | null>(null);
 
 onMounted(() => {
     const el = scrollEl.value;
-    if (el) el.scrollLeft = el.scrollWidth; // land on the latest weeks on mobile
+    if (el) el.scrollLeft = el.scrollWidth;
 });
 </script>
 
@@ -153,16 +152,13 @@ onMounted(() => {
   <div>
     <div ref="scrollEl" class="overflow-x-auto pb-1">
       <div class="flex items-start gap-1.5" style="width: max-content">
-        <!-- weekday labels: grid aligned to the 7 day-rows -->
         <div class="grid gap-[2px] pt-4 text-[9px] leading-[11px] text-ink-soft" style="grid-template-rows: repeat(7, 11px)" aria-hidden="true">
           <span>пон</span><span /><span>сре</span><span /><span>пет</span><span /><span />
         </div>
         <div>
-          <!-- month labels row -->
           <div class="relative mb-1 h-3 text-[9px] text-ink-soft" :style="{ width: `${weeks.length * 13}px` }">
             <span v-for="label in monthLabels" :key="label.col" class="absolute" :style="{ left: `${label.col * 13}px` }">{{ label.text }}</span>
           </div>
-          <!-- day grid: auto-flow column fills column-by-column (Mon..Sun rows) -->
           <div class="grid gap-[2px]" :style="{ gridTemplateRows: 'repeat(7, 11px)', gridAutoFlow: 'column', gridAutoColumns: '11px' }">
             <template v-for="(week, ci) in weeks" :key="ci">
               <template v-for="(day, ri) in week" :key="`${ci}-${ri}`">
@@ -175,7 +171,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-    <!-- legend, bottom-right -->
     <div class="mt-3 flex flex-wrap justify-end gap-x-3 gap-y-1 text-[10px] text-ink-soft">
       <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-accent" aria-hidden="true" />Решено</span>
       <span class="inline-flex items-center gap-1"><span class="inline-block size-[10px] rounded-[2px] bg-amber-400" aria-hidden="true" />Time Machine</span>

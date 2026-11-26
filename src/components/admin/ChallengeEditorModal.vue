@@ -4,66 +4,68 @@
       <h2 id="challenge-editor-title" class="font-display text-xl font-bold">{{ article ? "Уреди вест" : "Нова вест" }}</h2>
 
       <form class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2" @submit.prevent>
-        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Наслов и извор</p>
-        <div class="sm:col-span-2">
-          <label class="label" for="editor-original-title">Оригинален наслов</label>
-          <input id="editor-original-title" ref="firstField" v-model="originalTitle" class="input" />
-        </div>
-        <div>
-          <label class="label" for="editor-source-name">Извор</label>
-          <input id="editor-source-name" v-model="sourceName" class="input" />
-        </div>
-        <div>
-          <label class="label" for="editor-source-url">Линк до изворот</label>
-          <input id="editor-source-url" v-model="sourceUrl" class="input" type="url" />
-        </div>
-
-        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Шаблон и зборови</p>
-        <div class="sm:col-span-2">
-          <label class="label" for="editor-template">Шаблон на наслов</label>
-          <input id="editor-template" v-model="templateTitle" class="input" aria-label="Шаблон на наслов" />
-          <p v-pre class="mt-1 text-xs text-ink-soft">Користете {{0}}, {{1}} … за празни места.</p>
-        </div>
-
-        <div class="sm:col-span-2">
-          <div class="label">Зборови</div>
-          <div v-for="(blank, i) in blanks" :key="i" class="mb-2 flex flex-wrap items-center gap-2">
-            <span class="text-xs font-semibold text-ink-soft">Збор {{ i + 1 }}</span>
-            <input v-model="blank.answer" class="input max-w-[10rem]" :aria-label="`Одговор збор ${i + 1}`" />
-            <input v-model="blank.hint" class="input flex-1 min-w-[12rem]" :aria-label="`Хинт збор ${i + 1}`" />
-            <button
-              type="button"
-              class="btn btn-danger btn-sm"
-              :disabled="blanks.length <= 1"
-              :aria-label="`Избриши збор ${i + 1}`"
-              @click="removeBlank(i)"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="size-3.5"
-                aria-hidden="true"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
+        <fieldset :disabled="anyBusy" class="contents">
+          <p class="text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Наслов и извор</p>
+          <div class="sm:col-span-2">
+            <label class="label" for="editor-original-title">Оригинален наслов</label>
+            <input id="editor-original-title" ref="firstField" v-model="originalTitle" class="input" :disabled="Boolean(article)" />
           </div>
-          <button type="button" class="btn btn-secondary btn-sm mt-1" @click="addBlank">Додади збор</button>
-        </div>
+          <div>
+            <label class="label" for="editor-source-name">Извор</label>
+            <input id="editor-source-name" v-model="sourceName" class="input" />
+          </div>
+          <div>
+            <label class="label" for="editor-source-url">Линк до изворот</label>
+            <input id="editor-source-url" v-model="sourceUrl" class="input" type="url" />
+          </div>
 
-        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Објава</p>
-        <div>
-          <label class="label" for="editor-play-date">Датум за објава</label>
-          <input id="editor-play-date" v-model="playDate" class="input" type="date" :min="today" />
-        </div>
+          <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Шаблон и зборови</p>
+          <div class="sm:col-span-2">
+            <label class="label" for="editor-template">Шаблон на наслов</label>
+            <input id="editor-template" v-model="templateTitle" class="input" aria-label="Шаблон на наслов" />
+            <p v-pre class="mt-1 text-xs text-ink-soft">Користете {{0}}, {{1}} … за празни места.</p>
+          </div>
 
-        <p v-if="error" role="alert" class="text-sm font-medium text-wrong sm:col-span-2">{{ error }}</p>
+          <div class="sm:col-span-2">
+            <div class="label">Зборови</div>
+            <div v-for="(blank, i) in blanks" :key="i" class="mb-2 flex flex-wrap items-center gap-2">
+              <span class="text-xs font-semibold text-ink-soft">Збор {{ i + 1 }}</span>
+              <input v-model="blank.answer" class="input max-w-[10rem]" :aria-label="`Одговор збор ${i + 1}`" />
+              <input v-model="blank.hint" class="input flex-1 min-w-[12rem]" :aria-label="`Хинт збор ${i + 1}`" />
+              <button
+                type="button"
+                class="btn btn-danger btn-sm"
+                :disabled="blanks.length <= 1"
+                :aria-label="`Избриши збор ${i + 1}`"
+                @click="removeBlank(i)"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="size-3.5"
+                  aria-hidden="true"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm mt-1" @click="addBlank">Додади збор</button>
+          </div>
+
+          <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Објава</p>
+          <div>
+            <label class="label" for="editor-play-date">Датум за објава</label>
+            <input id="editor-play-date" v-model="playDate" class="input" type="date" :min="today" />
+          </div>
+
+          <p v-if="error" role="alert" class="text-sm font-medium text-wrong sm:col-span-2">{{ error }}</p>
+        </fieldset>
       </form>
 
       <div class="mt-5 flex flex-wrap items-center gap-2">
@@ -137,8 +139,9 @@ watch(
         originalTitle.value = a?.originalTitle ?? "";
         sourceName.value = a?.sourceName ?? "";
         sourceUrl.value = a?.sourceUrl ?? "";
-        playDate.value = "";
-        templateTitle.value = suggestion?.templateTitle ?? "";
+        playDate.value = a?.playDate ?? "";
+        templateTitle.value =
+            suggestion?.templateTitle || a?.originalTitle || "";
         blanks.value = suggestion?.blanks.length
             ? suggestion.blanks.map((b) => ({
                   answer: b.answer,
@@ -185,7 +188,6 @@ async function generateAi() {
             hint: b.hint,
         }));
         if (props.article) {
-            // The telefunc already persisted the proposal; keep the parent queue in sync.
             emit("saved", {
                 ...props.article,
                 aiSuggestion: {
@@ -218,8 +220,12 @@ function buildSuggestion() {
 }
 
 function hasAnyDraftInput() {
+    const trimmedTemplate = templateTitle.value.trim();
+    const templateEdited =
+        Boolean(trimmedTemplate) &&
+        trimmedTemplate !== originalTitle.value.trim();
     return Boolean(
-        templateTitle.value.trim() ||
+        templateEdited ||
             blanks.value.some((b) => b.answer.trim() || b.hint.trim()),
     );
 }
@@ -238,6 +244,7 @@ async function save() {
             originalTitle: originalTitle.value,
             sourceName: sourceName.value,
             sourceUrl: sourceUrl.value,
+            playDate: playDate.value || null,
         };
         if (props.article) {
             const updated = await onUpdateStagedArticle(props.article.id, {

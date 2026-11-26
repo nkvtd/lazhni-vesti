@@ -1,0 +1,1 @@
+ALTER TABLE "staged_articles" ADD COLUMN "play_date" date;

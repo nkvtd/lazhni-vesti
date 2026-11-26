@@ -39,6 +39,7 @@ export const stagedArticles = pgTable("staged_articles", {
         .$type<AiHeadlineProposal | null>()
         .default(null),
     status: stagedStatusEnum("status").default("pending").notNull(),
+    playDate: date("play_date"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     scrapedAt: timestamp("scraped_at", { withTimezone: true })
         .defaultNow()

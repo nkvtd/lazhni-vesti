@@ -2,7 +2,7 @@
   <header ref="headerEl" class="sticky top-0 z-40 border-b-2 border-ink bg-paper">
     <div class="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3 px-4 py-3">
       <a href="/" class="flex items-center whitespace-nowrap">
-        <img src="/assets/lv-logo.svg" alt="Лажни вести?" class="h-9 w-auto sm:h-10" />
+        <img src="/assets/lv_logo.svg" alt="Лажни вести?" class="h-9 w-auto sm:h-10" />
       </a>
 
       <nav class="hidden items-center gap-1.5 md:flex" aria-label="Главно мени">
@@ -85,7 +85,6 @@ const pageContext = usePageContext();
 const menuOpen = ref(false);
 const headerEl = ref<HTMLElement | null>(null);
 
-// Close the menu on client-side navigation.
 watch(
     () => pageContext.urlPathname,
     () => {
