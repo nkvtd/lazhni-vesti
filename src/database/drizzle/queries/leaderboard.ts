@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, sum } from "drizzle-orm";
 import type { Db } from "../db";
 import {
     badges,
@@ -7,7 +7,7 @@ import {
     user,
     usersToBadges,
 } from "../schema";
-import { getSkopjeDateString } from "./util";
+import { getSkopjeDateString, getStartOfWeekDateString } from "./util";
 
 export async function getLeaderboardsData(db: Db) {
     const today = getSkopjeDateString();
@@ -51,9 +51,36 @@ export async function getLeaderboardsData(db: Db) {
         .orderBy(desc(user.totalPoints), desc(user.longestStreak))
         .limit(50);
 
+    const weekStart = getStartOfWeekDateString();
+    const weekly = await db
+        .select({
+            userId: user.id,
+            username: user.name,
+            weeklyPoints: sum(gameSessions.score),
+            wins: count(),
+        })
+        .from(gameSessions)
+        .innerJoin(user, eq(gameSessions.userId, user.id))
+        .innerJoin(
+            dailyChallenges,
+            eq(gameSessions.challengeId, dailyChallenges.id),
+        )
+        .where(
+            and(
+                gte(dailyChallenges.playDate, weekStart),
+                eq(gameSessions.completed, true),
+                eq(gameSessions.isFreePlay, false),
+                gt(gameSessions.score, 0),
+            ),
+        )
+        .groupBy(user.id, user.name)
+        .orderBy(desc(sum(gameSessions.score)))
+        .limit(50);
+
     const userIds = [
         ...daily.map((d) => d.userId),
         ...allTime.map((a) => a.userId),
+        ...weekly.map((w) => w.userId),
     ];
 
     const badgeRows =
@@ -88,6 +115,13 @@ export async function getLeaderboardsData(db: Db) {
         allTime: allTime.map((a) => ({
             ...a,
             badges: badgesByUser.get(a.userId) ?? [],
+        })),
+        weekly: weekly.map((w) => ({
+            userId: w.userId,
+            username: w.username,
+            weeklyPoints: Number(w.weeklyPoints ?? 0),
+            wins: Number(w.wins ?? 0),
+            badges: badgesByUser.get(w.userId) ?? [],
         })),
     };
 }

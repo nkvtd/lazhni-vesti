@@ -109,6 +109,7 @@ export class ScraperService {
                 sourceName: string;
                 originalTitle: string;
                 sourceUrl: string;
+                articleExcerpt: string | null;
                 matchedKeywords: string[];
             }> = [];
 
@@ -128,6 +129,7 @@ export class ScraperService {
                                 sourceName: feed.name,
                                 originalTitle: item.title,
                                 sourceUrl: item.url,
+                                articleExcerpt: item.excerpt ?? null,
                                 matchedKeywords: hits,
                             });
                         }
@@ -167,7 +169,7 @@ export class ScraperService {
     private parse(
         raw: string,
         feed: FeedConfig,
-    ): Array<{ title: string; url: string }> {
+    ): Array<{ title: string; url: string; excerpt?: string }> {
         if (feed.type === "json" && feed.jsonMap) {
             return feed.jsonMap(JSON.parse(raw));
         }
@@ -178,10 +180,23 @@ export class ScraperService {
             const link =
                 block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1] ??
                 block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1];
+            const description = block.match(
+                /<description[^>]*>([\s\S]*?)<\/description>/i,
+            )?.[1];
 
             if (!title || !link) return [];
 
-            return [{ title: this.cleanXml(title), url: this.cleanXml(link) }];
+            return [
+                {
+                    title: this.cleanXml(title),
+                    url: this.cleanXml(link),
+                    excerpt: description
+                        ? this.cleanXml(description)
+                              .replace(/\s+/g, " ")
+                              .slice(0, 400)
+                        : undefined,
+                },
+            ];
         });
     }
 

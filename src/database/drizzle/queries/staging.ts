@@ -4,6 +4,7 @@ import {
     type AiHeadlineProposal,
     dailyChallenges,
     type HeadlineBlankItem,
+    type RealityCheckData,
     stagedArticles,
 } from "../schema";
 import { getSkopjeDateString } from "./util";
@@ -94,6 +95,7 @@ export async function createStagedArticle(
         sourceUrl: string;
         matchedKeywords?: string[];
         aiSuggestion?: AiHeadlineProposal | null;
+        articleExcerpt?: string | null;
         playDate?: string | null;
     },
 ) {
@@ -105,6 +107,7 @@ export async function createStagedArticle(
             sourceUrl: input.sourceUrl.trim(),
             matchedKeywords: input.matchedKeywords ?? [],
             aiSuggestion: input.aiSuggestion ?? null,
+            articleExcerpt: input.articleExcerpt?.trim() || null,
             playDate: input.playDate || null,
             status: "pending",
         })
@@ -121,6 +124,7 @@ export async function updateStagedArticle(
         sourceUrl?: string;
         matchedKeywords?: string[];
         aiSuggestion?: AiHeadlineProposal | null;
+        articleExcerpt?: string | null;
         playDate?: string | null;
     },
 ) {
@@ -141,6 +145,9 @@ export async function updateStagedArticle(
                 : {}),
             ...(input.aiSuggestion !== undefined
                 ? { aiSuggestion: input.aiSuggestion }
+                : {}),
+            ...(input.articleExcerpt !== undefined
+                ? { articleExcerpt: input.articleExcerpt?.trim() || null }
                 : {}),
             ...(input.playDate !== undefined
                 ? { playDate: input.playDate || null }
@@ -191,6 +198,9 @@ export async function publishChallenge(
         sourceName: string;
         sourceUrl: string;
         blanks: HeadlineBlankItem[];
+        eventContext?: string;
+        techniqueId?: string | null;
+        realityCheck?: RealityCheckData | null;
     },
 ) {
     return db.transaction(async (tx) => {
@@ -205,6 +215,15 @@ export async function publishChallenge(
                     aiSuggestion: {
                         templateTitle: input.templateTitle.trim(),
                         blanks: input.blanks,
+                        ...(input.eventContext?.trim()
+                            ? { eventContext: input.eventContext.trim() }
+                            : {}),
+                        ...(input.techniqueId
+                            ? { techniqueId: input.techniqueId }
+                            : {}),
+                        ...(input.realityCheck
+                            ? { realityCheck: input.realityCheck }
+                            : {}),
                     },
                 })
                 .where(eq(stagedArticles.id, input.stagedArticleId));
@@ -222,7 +241,11 @@ export async function publishChallenge(
                     index: idx,
                     answer: b.answer.trim(),
                     hint: b.hint.trim(),
+                    ...(b.decoys ? { decoys: b.decoys } : {}),
                 })),
+                eventContext: input.eventContext?.trim() || null,
+                techniqueId: input.techniqueId || null,
+                realityCheck: input.realityCheck ?? null,
                 stagedArticleId: input.stagedArticleId ?? null,
             })
             .returning();

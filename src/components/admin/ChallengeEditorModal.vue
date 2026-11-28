@@ -18,6 +18,10 @@
             <label class="label" for="editor-source-url">Линк до изворот</label>
             <input id="editor-source-url" v-model="sourceUrl" class="input" type="url" />
           </div>
+          <div class="sm:col-span-2">
+            <label class="label" for="editor-excerpt">Исечок од текстот</label>
+            <textarea id="editor-excerpt" v-model="articleExcerpt" class="input" rows="2" placeholder="Незадолжително — краток исечок за AI" />
+          </div>
 
           <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Шаблон и зборови</p>
           <div class="sm:col-span-2">
@@ -28,34 +32,82 @@
 
           <div class="sm:col-span-2">
             <div class="label">Зборови</div>
-            <div v-for="(blank, i) in blanks" :key="i" class="mb-2 flex flex-wrap items-center gap-2">
-              <span class="text-xs font-semibold text-ink-soft">Збор {{ i + 1 }}</span>
-              <input v-model="blank.answer" class="input max-w-[10rem]" :aria-label="`Одговор збор ${i + 1}`" />
-              <input v-model="blank.hint" class="input flex-1 min-w-[12rem]" :aria-label="`Хинт збор ${i + 1}`" />
-              <button
-                type="button"
-                class="btn btn-danger btn-sm"
-                :disabled="blanks.length <= 1"
-                :aria-label="`Избриши збор ${i + 1}`"
-                @click="removeBlank(i)"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="size-3.5"
-                  aria-hidden="true"
+            <div v-for="(blank, i) in blanks" :key="i" class="mb-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-semibold text-ink-soft">Збор {{ i + 1 }}</span>
+                <input v-model="blank.answer" class="input max-w-[10rem]" :aria-label="`Одговор збор ${i + 1}`" />
+                <input v-model="blank.hint" class="input flex-1 min-w-[12rem]" :aria-label="`Хинт збор ${i + 1}`" />
+                <button
+                  type="button"
+                  class="btn btn-danger btn-sm"
+                  :disabled="blanks.length <= 1"
+                  :aria-label="`Избриши збор ${i + 1}`"
+                  @click="removeBlank(i)"
                 >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="size-3.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div class="mt-1 flex flex-wrap items-center gap-2 pl-1">
+                <span class="text-xs text-ink-soft">Мамци</span>
+                <input
+                  v-for="(_, d) in blank.decoys"
+                  :key="d"
+                  v-model="blank.decoys[d]"
+                  class="input max-w-[8rem]"
+                  :placeholder="`Дека ${d + 1}`"
+                  :aria-label="`Мамец ${d + 1} за збор ${i + 1}`"
+                />
+              </div>
             </div>
             <button type="button" class="btn btn-secondary btn-sm mt-1" @click="addBlank">Додади збор</button>
+          </div>
+
+          <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Контекст и реалност</p>
+          <div class="sm:col-span-2">
+            <label class="label" for="editor-event-context">Што се случи?</label>
+            <textarea id="editor-event-context" v-model="eventContext" class="input" rows="2" placeholder="1-2 реченици без спојлери за скриените зборови" />
+          </div>
+          <div>
+            <label class="label" for="editor-technique">Техника</label>
+            <select id="editor-technique" v-model="techniqueId" class="input">
+              <option value="">(без техника)</option>
+              <option v-for="technique in MEDIA_TECHNIQUES" :key="technique.id" :value="technique.id">{{ technique.id }}</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <div class="label">Проверка на реалноста</div>
+            <div class="grid gap-2">
+              <input
+                v-for="(_, i) in realitySummaries"
+                :key="i"
+                v-model="realitySummaries[i]"
+                class="input"
+                :placeholder="`Опис ${i + 1}`"
+                :aria-label="`Опис ${i + 1} на што навистина пишува`"
+              />
+            </div>
+            <fieldset class="mt-2">
+              <legend class="label">Точен одговор</legend>
+              <div class="flex gap-4">
+                <label v-for="i in 3" :key="i" class="flex items-center gap-1.5 text-sm">
+                  <input v-model.number="realityCorrectIndex" type="radio" name="reality-correct" :value="i - 1" />
+                  Опис {{ i }}
+                </label>
+              </div>
+            </fieldset>
           </div>
 
           <p class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-soft sm:col-span-2">Објава</p>
@@ -96,6 +148,8 @@ import {
     onUpdateStagedArticle,
 } from "../../pages/admin/Admin.telefunc";
 import { errMessage } from "../../utils/error";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import { MEDIA_TECHNIQUES } from "../../utils/mediaLiteracy";
 
 type Staged = AdminData["stagedArticles"][number];
 type Upcoming = AdminData["upcomingChallenges"][number];
@@ -112,14 +166,19 @@ const emit = defineEmits<{
     published: [challenge: Upcoming];
 }>();
 
-type BlankDraft = { answer: string; hint: string };
+type BlankDraft = { answer: string; hint: string; decoys: string[] };
 
 const originalTitle = ref("");
 const sourceName = ref("");
 const sourceUrl = ref("");
+const articleExcerpt = ref("");
 const playDate = ref("");
 const templateTitle = ref("");
 const blanks = ref<BlankDraft[]>([]);
+const eventContext = ref("");
+const techniqueId = ref("");
+const realitySummaries = ref<string[]>(["", "", ""]);
+const realityCorrectIndex = ref(0);
 const error = ref<string | null>(null);
 const aiBusy = ref(false);
 const saveBusy = ref(false);
@@ -139,6 +198,7 @@ watch(
         originalTitle.value = a?.originalTitle ?? "";
         sourceName.value = a?.sourceName ?? "";
         sourceUrl.value = a?.sourceUrl ?? "";
+        articleExcerpt.value = a?.articleExcerpt ?? "";
         playDate.value = a?.playDate ?? "";
         templateTitle.value =
             suggestion?.templateTitle || a?.originalTitle || "";
@@ -146,8 +206,15 @@ watch(
             ? suggestion.blanks.map((b) => ({
                   answer: b.answer,
                   hint: b.hint,
+                  decoys: [0, 1, 2].map((d) => b.decoys?.[d] ?? ""),
               }))
-            : [{ answer: "", hint: "" }];
+            : [{ answer: "", hint: "", decoys: ["", "", ""] }];
+        eventContext.value = suggestion?.eventContext ?? "";
+        techniqueId.value = suggestion?.techniqueId ?? "";
+        realitySummaries.value = suggestion?.realityCheck
+            ? [...suggestion.realityCheck.summaries]
+            : ["", "", ""];
+        realityCorrectIndex.value = suggestion?.realityCheck?.correctIndex ?? 0;
         error.value = null;
         // biome-ignore lint/style/useVueNextTickPromise: callback form keeps focus logic local
         nextTick(() => firstField.value?.focus());
@@ -167,7 +234,7 @@ onMounted(() => window.addEventListener("keydown", onKeydown));
 onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
 function addBlank() {
-    blanks.value.push({ answer: "", hint: "" });
+    blanks.value.push({ answer: "", hint: "", decoys: ["", "", ""] });
 }
 
 function removeBlank(index: number) {
@@ -181,19 +248,24 @@ async function generateAi() {
         const proposal = await onGenerateAiProposal(
             props.article?.id,
             originalTitle.value,
+            articleExcerpt.value,
         );
         templateTitle.value = proposal.templateTitle;
         blanks.value = proposal.blanks.map((b) => ({
             answer: b.answer,
             hint: b.hint,
+            decoys: [0, 1, 2].map((d) => b.decoys?.[d] ?? ""),
         }));
+        eventContext.value = proposal.eventContext ?? "";
+        techniqueId.value = proposal.techniqueId ?? "";
+        realitySummaries.value = proposal.realityCheck
+            ? [...proposal.realityCheck.summaries]
+            : ["", "", ""];
+        realityCorrectIndex.value = proposal.realityCheck?.correctIndex ?? 0;
         if (props.article) {
             emit("saved", {
                 ...props.article,
-                aiSuggestion: {
-                    templateTitle: proposal.templateTitle,
-                    blanks: proposal.blanks,
-                },
+                aiSuggestion: proposal,
             });
         }
     } catch (e) {
@@ -203,19 +275,59 @@ async function generateAi() {
     }
 }
 
+function buildDecoys(blank: BlankDraft): string[] | undefined {
+    const decoys = blank.decoys.map((d) => d.trim());
+    return decoys.every(Boolean) ? decoys : undefined;
+}
+
+function buildRealityCheck() {
+    const summaries = realitySummaries.value.map((s) => s.trim());
+    if (summaries.some((s) => !s)) return null;
+    return {
+        summaries: summaries as [string, string, string],
+        correctIndex: realityCorrectIndex.value,
+    };
+}
+
+function validateExtras(): string | null {
+    for (let i = 0; i < blanks.value.length; i++) {
+        const filled = blanks.value[i].decoys.filter((d) => d.trim()).length;
+        if (filled > 0 && filled < 3) {
+            return `Збор ${i + 1}: пополнете ги сите три мамци или ниту еден.`;
+        }
+    }
+    const filledSummaries = realitySummaries.value.filter((s) =>
+        s.trim(),
+    ).length;
+    if (filledSummaries > 0 && filledSummaries < 3) {
+        return "Проверка на реалноста: пополнете ги сите три описи или ниту еден.";
+    }
+    return null;
+}
+
 function buildSuggestion() {
     const template = templateTitle.value.trim();
     const complete = blanks.value.every(
         (b) => b.answer.trim() && b.hint.trim(),
     );
     if (!template || !/\{\{\d+\}\}/.test(template) || !complete) return null;
+    const realityCheck = buildRealityCheck();
     return {
         templateTitle: template,
-        blanks: blanks.value.map((b, i) => ({
-            index: i,
-            answer: b.answer.trim(),
-            hint: b.hint.trim(),
-        })),
+        blanks: blanks.value.map((b, i) => {
+            const decoys = buildDecoys(b);
+            return {
+                index: i,
+                answer: b.answer.trim(),
+                hint: b.hint.trim(),
+                ...(decoys ? { decoys } : {}),
+            };
+        }),
+        ...(eventContext.value.trim()
+            ? { eventContext: eventContext.value.trim() }
+            : {}),
+        ...(techniqueId.value ? { techniqueId: techniqueId.value } : {}),
+        ...(realityCheck ? { realityCheck } : {}),
     };
 }
 
@@ -226,7 +338,15 @@ function hasAnyDraftInput() {
         trimmedTemplate !== originalTitle.value.trim();
     return Boolean(
         templateEdited ||
-            blanks.value.some((b) => b.answer.trim() || b.hint.trim()),
+            blanks.value.some(
+                (b) =>
+                    b.answer.trim() ||
+                    b.hint.trim() ||
+                    b.decoys.some((d) => d.trim()),
+            ) ||
+            eventContext.value.trim() ||
+            techniqueId.value ||
+            realitySummaries.value.some((s) => s.trim()),
     );
 }
 
@@ -234,6 +354,11 @@ async function save() {
     error.value = null;
     saveBusy.value = true;
     try {
+        const extrasError = validateExtras();
+        if (extrasError) {
+            error.value = extrasError;
+            return;
+        }
         const aiSuggestion = buildSuggestion();
         if (!aiSuggestion && hasAnyDraftInput()) {
             error.value =
@@ -244,6 +369,7 @@ async function save() {
             originalTitle: originalTitle.value,
             sourceName: sourceName.value,
             sourceUrl: sourceUrl.value,
+            articleExcerpt: articleExcerpt.value || null,
             playDate: playDate.value || null,
         };
         if (props.article) {
@@ -280,6 +406,11 @@ async function publish() {
         error.value = "Пополнете шаблон и одговори за сите зборови.";
         return;
     }
+    const extrasError = validateExtras();
+    if (extrasError) {
+        error.value = extrasError;
+        return;
+    }
     publishBusy.value = true;
     try {
         const challenge = await onPublishChallenge({
@@ -289,11 +420,18 @@ async function publish() {
             templateTitle: templateTitle.value,
             sourceName: sourceName.value,
             sourceUrl: sourceUrl.value,
-            blanks: blanks.value.map((b, i) => ({
-                index: i,
-                answer: b.answer,
-                hint: b.hint,
-            })),
+            blanks: blanks.value.map((b, i) => {
+                const decoys = buildDecoys(b);
+                return {
+                    index: i,
+                    answer: b.answer.trim(),
+                    hint: b.hint.trim(),
+                    ...(decoys ? { decoys } : {}),
+                };
+            }),
+            eventContext: eventContext.value.trim() || undefined,
+            techniqueId: techniqueId.value || undefined,
+            realityCheck: buildRealityCheck() ?? undefined,
         });
         emit("published", challenge);
         emit("close");

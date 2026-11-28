@@ -26,7 +26,6 @@
       @focus="emit('focus', blank.index)"
     />
     <span v-if="blank.wrongAttempts > 0" class="text-xs font-semibold text-wrong" :aria-label="`${blank.wrongAttempts} погрешни обиди`">×{{ blank.wrongAttempts }}</span>
-    <span v-if="blank.hintUsed" class="text-xs font-bold text-amber-600" title="Хинт отклучен" aria-hidden="true">?</span>
   </template>
 </template>
 

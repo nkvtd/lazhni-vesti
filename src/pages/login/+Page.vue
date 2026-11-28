@@ -35,7 +35,7 @@
 
 <script lang="ts" setup>
 import { createAuthClient } from "better-auth/vue";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 
 const AUTH_ERRORS: Record<string, string> = {
     INVALID_EMAIL_OR_PASSWORD: "Погрешна е-пошта или лозинка.",
@@ -53,6 +53,15 @@ function authErrorMessage(
 }
 
 const authClient = createAuthClient();
+const safeRedirect = ref<string | null>(null);
+onMounted(() => {
+    const requested =
+        new URLSearchParams(window.location.search).get("redirect") ?? "";
+    safeRedirect.value =
+        requested.startsWith("/") && !requested.startsWith("//")
+            ? requested
+            : null;
+});
 const email = ref("");
 const password = ref("");
 const error = ref<string | null>(null);
@@ -74,7 +83,7 @@ const onSubmit = async () => {
             );
             return;
         }
-        window.location.href = "/";
+        window.location.href = safeRedirect.value ?? "/";
     } catch {
         error.value = "Неуспешна најава — проверете ја врската.";
     } finally {

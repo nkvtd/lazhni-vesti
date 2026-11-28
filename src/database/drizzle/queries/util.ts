@@ -10,3 +10,12 @@ export function getStartOfMonth(date = new Date()): Date {
     const [year, month] = getSkopjeDateString(date).split("-").map(Number);
     return new Date(Date.UTC(year, month - 1, 1));
 }
+
+/** Monday of the current week (Europe/Skopje) as `YYYY-MM-DD`. */
+export function getStartOfWeekDateString(date = new Date()): string {
+    const today = getSkopjeDateString(date);
+    const monday = new Date(`${today}T00:00:00Z`);
+    // getUTCDay: 0 = Sunday .. 6 = Saturday
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    return monday.toISOString().slice(0, 10);
+}

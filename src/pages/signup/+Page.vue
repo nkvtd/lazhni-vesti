@@ -43,7 +43,7 @@
 <script lang="ts" setup>
 import { createAuthClient } from "better-auth/vue";
 import { useData } from "vike-vue/useData";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import type { Data } from "./+data";
 
 const AUTH_ERRORS: Record<string, string> = {
@@ -63,6 +63,15 @@ function authErrorMessage(
 
 const authClient = createAuthClient();
 const data = useData<Data>();
+const safeRedirect = ref<string | null>(null);
+onMounted(() => {
+    const requested =
+        new URLSearchParams(window.location.search).get("redirect") ?? "";
+    safeRedirect.value =
+        requested.startsWith("/") && !requested.startsWith("//")
+            ? requested
+            : null;
+});
 const name = ref(data.suggestedName);
 const email = ref("");
 const password = ref("");
@@ -86,7 +95,7 @@ const onSubmit = async () => {
             );
             return;
         }
-        window.location.href = "/";
+        window.location.href = safeRedirect.value ?? "/";
     } catch {
         error.value = "Неуспешна регистрација — проверете ја врската.";
     } finally {
