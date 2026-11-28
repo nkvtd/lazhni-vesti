@@ -71,20 +71,33 @@ export async function getChallengeForClient(
         playDate: challenge.playDate,
         templateTitle: challenge.templateTitle,
         sourceName: challenge.sourceName,
+        eventContext: challenge.eventContext ?? null,
         sourceUrl: completed ? challenge.sourceUrl : undefined,
         originalTitle: completed ? challenge.originalTitle : undefined,
+        techniqueId: completed ? (challenge.techniqueId ?? null) : undefined,
+        realityCheck: completed ? (challenge.realityCheck ?? null) : undefined,
+        realityChoiceIndex: completed
+            ? (session?.realityChoiceIndex ?? null)
+            : null,
+        realityCorrect: completed ? (session?.realityCorrect ?? null) : null,
         isFreePlay,
         canUseTimeMachine,
         timeMachineReason,
         score: session?.score ?? 1000,
         wrongGuessesCount: session?.wrongGuessesCount ?? 0,
         hintsUsedCount: session?.hintsUsedCount ?? 0,
+        // Paid unlocks only — free auto-assists are reported separately so the
+        // client can charge −80 per paid option without inflating the penalty.
+        usedLifelinesOptions: session?.usedLifelines?.optionsUnlocked ?? [],
+        usedLifelinesFreeAssists: session?.usedLifelines?.freeAssists ?? [],
         completed,
         won,
         blanks: challenge.blanks.map((b) => {
             const state = session?.progress?.[b.index];
             const solved = state?.solved ?? false;
             const hintUsed = state?.hintUsed ?? false;
+            const revealed =
+                session?.usedLifelines?.revealedLetters?.[b.index] ?? [];
 
             return {
                 index: b.index,
@@ -93,8 +106,65 @@ export async function getChallengeForClient(
                 wrongAttempts: state?.wrongAttempts ?? 0,
                 revealedAnswer: solved || completed ? b.answer : undefined,
                 revealedHint: hintUsed || completed ? b.hint : undefined,
+                answerLength: b.answer.trim().length,
+                hint: b.hint,
+                hasDecoys: (b.decoys?.length ?? 0) > 0,
+                revealedLetters: revealed
+                    .filter(
+                        (position) =>
+                            Number.isInteger(position) &&
+                            position >= 0 &&
+                            position < b.answer.length,
+                    )
+                    .map((position) => ({
+                        position,
+                        char: b.answer[position],
+                    })),
             };
         }),
+    };
+}
+
+export async function getTodayCommunityStats(db: Db) {
+    const today = getSkopjeDateString();
+    const [challenge] = await db
+        .select({ id: dailyChallenges.id })
+        .from(dailyChallenges)
+        .where(eq(dailyChallenges.playDate, today));
+
+    if (!challenge) return null;
+
+    const sessions = await db
+        .select({
+            score: gameSessions.score,
+            completed: gameSessions.completed,
+            isFreePlay: gameSessions.isFreePlay,
+        })
+        .from(gameSessions)
+        .where(eq(gameSessions.challengeId, challenge.id));
+
+    const completedSessions = sessions.filter(
+        (s) => s.completed && !s.isFreePlay,
+    );
+    // слободните игри не се бројат во стапката
+    const totalSessions = sessions.filter((s) => !s.isFreePlay).length;
+    const solveRate =
+        totalSessions > 0
+            ? Math.round((completedSessions.length / totalSessions) * 100)
+            : 0;
+    const averageScore =
+        completedSessions.length > 0
+            ? Math.round(
+                  completedSessions.reduce((sum, s) => sum + s.score, 0) /
+                      completedSessions.length,
+              )
+            : 0;
+
+    return {
+        totalSessions,
+        completedSessions: completedSessions.length,
+        solveRate,
+        averageScore,
     };
 }
 

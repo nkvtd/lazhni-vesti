@@ -3,12 +3,12 @@
   <h1 class="font-display text-3xl font-black tracking-tight text-ink">Рангирање</h1>
   <p class="mt-1 text-sm text-ink-soft">Денешен предизвик · {{ formatMkDate(data.today) }}</p>
 
-  <div class="mt-6 inline-flex rounded-lg border-2 border-ink bg-card p-1 shadow-hard-sm" role="tablist" aria-label="Табови за рангирање">
+  <div class="mt-6 inline-flex flex-wrap rounded-lg border-2 border-ink bg-card p-1 shadow-hard-sm" role="tablist" aria-label="Табови за рангирање">
     <button
       type="button"
       role="tab"
       :aria-selected="activeTab === 'daily'"
-      class="rounded-md border-2 px-4 py-1.5 text-sm font-bold"
+      class="rounded-md border-2 px-3 py-1.5 text-sm font-bold"
       :class="activeTab === 'daily' ? 'border-ink bg-ink text-paper' : 'border-transparent text-ink-soft hover:text-ink'"
       @click="activeTab = 'daily'"
     >
@@ -17,8 +17,18 @@
     <button
       type="button"
       role="tab"
+      :aria-selected="activeTab === 'weekly'"
+      class="rounded-md border-2 px-3 py-1.5 text-sm font-bold"
+      :class="activeTab === 'weekly' ? 'border-ink bg-ink text-paper' : 'border-transparent text-ink-soft hover:text-ink'"
+      @click="activeTab = 'weekly'"
+    >
+      Оваа недела
+    </button>
+    <button
+      type="button"
+      role="tab"
       :aria-selected="activeTab === 'allTime'"
-      class="rounded-md border-2 px-4 py-1.5 text-sm font-bold"
+      class="rounded-md border-2 px-3 py-1.5 text-sm font-bold"
       :class="activeTab === 'allTime' ? 'border-ink bg-ink text-paper' : 'border-transparent text-ink-soft hover:text-ink'"
       @click="activeTab = 'allTime'"
     >
@@ -60,6 +70,37 @@
     </template>
   </div>
 
+  <div v-show="activeTab === 'weekly'" role="tabpanel" aria-label="Оваа недела">
+    <p v-if="!data.weekly.length" class="mt-4 text-sm text-ink-soft">Оваа недела сè уште нема завршени предизвици.</p>
+    <ol v-else class="mt-4 divide-y-2 divide-ink/10 rounded-xl border-2 border-ink bg-card shadow-hard">
+      <li
+        v-for="(row, index) in data.weekly"
+        :key="row.userId"
+        class="flex items-center justify-between gap-3 px-4 py-3"
+        :class="row.userId === pageContext.user?.id ? 'bg-accent-soft/70' : ''"
+      >
+        <span class="flex min-w-0 items-center gap-2.5">
+          <span class="flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold" :class="rankClass(index)">{{ index + 1 }}</span>
+          <span class="truncate text-sm font-bold text-ink">{{ row.username }}</span>
+          <span v-if="row.userId === pageContext.user?.id" class="chip shrink-0 border-ink bg-accent text-white">Вие</span>
+          <span
+            v-for="b in row.badges"
+            :key="b.name"
+            class="inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-ink/25 bg-amber-100 text-amber-700"
+            :title="b.name"
+            :aria-label="b.name"
+          >
+            <BadgeIcon :icon="b.icon" class="size-3" />
+          </span>
+        </span>
+        <span class="flex shrink-0 items-center gap-2">
+          <span class="chip border-ink bg-amber-400 font-bold text-ink"><span class="font-display tabular-nums">{{ row.weeklyPoints }}</span> п.</span>
+          <span class="chip">{{ row.wins }} победа</span>
+        </span>
+      </li>
+    </ol>
+  </div>
+
   <div v-show="activeTab === 'allTime'" role="tabpanel" aria-label="Севкупно">
     <p v-if="!data.allTime.length" class="mt-4 text-sm text-ink-soft">Сè уште нема регистрирани играчи.</p>
     <ol v-else class="mt-4 divide-y-2 divide-ink/10 rounded-xl border-2 border-ink bg-card shadow-hard">
@@ -73,6 +114,7 @@
           <span class="flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold" :class="rankClass(index)">{{ index + 1 }}</span>
           <span class="truncate text-sm font-bold text-ink">{{ row.username }}</span>
           <span v-if="row.userId === pageContext.user?.id" class="chip shrink-0 border-ink bg-accent text-white">Вие</span>
+          <span class="chip hidden shrink-0 border-ink/20 bg-ink/5 sm:inline-flex" title="Кариерна титула">{{ getCareerRank(row.totalPoints).title }}</span>
           <span
             v-for="b in row.badges"
             :key="b.name"
@@ -117,11 +159,13 @@ import { ref } from "vue";
 import BadgeIcon from "../../components/ui/BadgeIcon.vue";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatMkDate } from "../../utils/format";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import { getCareerRank } from "../../utils/ranks";
 import type { Data } from "./+data";
 
 const data = useData<Data>();
 const pageContext = usePageContext();
-const activeTab = ref<"daily" | "allTime">("daily");
+const activeTab = ref<"daily" | "weekly" | "allTime">("daily");
 
 function rankClass(index: number): string {
     if (index === 0)

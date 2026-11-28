@@ -23,6 +23,9 @@
           </template>
 
           <p class="mt-1 text-sm text-ink-soft">{{ data.user.email }}</p>
+          <p class="text-xs font-bold text-amber-600">
+            {{ rank.title }}<span v-if="rank.pointsToNext" class="font-normal text-ink-soft"> · уште {{ rank.pointsToNext }} п. до {{ rank.nextTitle }}</span>
+          </p>
         </div>
       </div>
       <button type="button" class="btn btn-sm shrink-0 border-wrong bg-wrong text-white hover:bg-wrong/90" :disabled="signOutBusy" @click="signOut">Одјава</button>
@@ -139,23 +142,75 @@
     </div>
   </section>
 
+  <div class="card mt-8 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="font-display text-xl font-bold">Моето знаење</h2>
+      <span class="chip border-ink bg-accent text-white">{{ data.learnedTechniques.length }} / 7 совладани техники</span>
+    </div>
+    <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div
+        v-for="technique in MEDIA_TECHNIQUES"
+        :key="technique.id"
+        class="rounded-md border-2 p-2"
+        :class="data.learnedTechniques.includes(technique.id) ? 'border-ink bg-accent-soft/60' : 'border-dashed border-ink/25 text-ink-soft'"
+        :title="technique.definition"
+      >
+        <span v-if="data.learnedTechniques.includes(technique.id)" class="flex items-center gap-1.5 text-sm font-bold text-ink">
+          <BadgeIcon icon="check" class="size-4 shrink-0 text-accent" />
+          {{ technique.id }}
+        </span>
+        <template v-else>
+          <span class="block text-sm font-bold">{{ technique.id }}</span>
+          <span class="block text-xs">Сè уште неистражена</span>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="font-display text-xl font-bold">Оваа недела</h2>
+      <span class="chip border-ink bg-accent text-white">{{ data.weeklyProgress.won }} / 7 денови</span>
+    </div>
+    <div class="mt-3 grid grid-cols-7 gap-1">
+      <div v-for="(day, i) in WEEK_DAYS" :key="day" class="flex flex-col items-center gap-1">
+        <span class="h-6 w-full rounded-sm" :class="i < data.weeklyProgress.won ? 'bg-accent' : i === todayIndex ? 'border-2 border-ink' : 'bg-ink/10'" />
+        <span class="text-[10px] text-ink-soft" aria-hidden="true">{{ day }}</span>
+      </div>
+    </div>
+    <p class="mt-2 text-xs text-ink-soft">Освоени денови оваа недела (по ред)</p>
+    <p class="sr-only">{{ data.weeklyProgress.won }} од 7 освоени денови оваа недела</p>
+  </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { createAuthClient } from "better-auth/vue";
 import { useData } from "vike-vue/useData";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import BadgeIcon from "../../components/ui/BadgeIcon.vue";
 import { errMessage } from "../../utils/error";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import { formatIsoDate } from "../../utils/format";
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import { MEDIA_TECHNIQUES } from "../../utils/mediaLiteracy";
+import { getCareerRank } from "../../utils/ranks";
 import type { Data } from "./+data";
 import { onUpdateUsername } from "./Account.telefunc";
 
 const authClient = createAuthClient();
 const data = useData<Data>();
+
+const rank = getCareerRank(data.user.totalPoints);
+const WEEK_DAYS = ["пон", "вто", "сре", "чет", "пет", "саб", "нед"];
+const todayIndex = ref<number | null>(null);
+
+// Date is client-only so the SSR markup stays deterministic; Mon = 0.
+onMounted(() => {
+    todayIndex.value = (new Date().getDay() + 6) % 7;
+});
 
 const editing = ref(false);
 const nameDraft = ref("");

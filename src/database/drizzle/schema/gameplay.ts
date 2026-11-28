@@ -19,6 +19,15 @@ export type BlankProgressState = {
     revealedHint?: string;
 };
 
+export type UsedLifelines = {
+    /** blankIndex → revealed letter positions (0-based) in the answer */
+    revealedLetters: Record<number, number[]>;
+    /** blankIndexes for which the 4-options lifeline was PAID (−80 each) */
+    optionsUnlocked: number[];
+    /** blankIndexes unlocked by the free auto-assist (server-verified, no cost) */
+    freeAssists: number[];
+};
+
 export const gameSessions = pgTable(
     "game_sessions",
     {
@@ -37,6 +46,11 @@ export const gameSessions = pgTable(
             .$type<Record<number, BlankProgressState>>()
             .default({})
             .notNull(),
+        usedLifelines: jsonb("used_lifelines")
+            .$type<UsedLifelines | null>()
+            .default(null),
+        realityChoiceIndex: integer("reality_choice_index"),
+        realityCorrect: boolean("reality_correct"),
         completed: boolean("completed").default(false).notNull(),
         completedAt: timestamp("completed_at", { withTimezone: true }),
     },

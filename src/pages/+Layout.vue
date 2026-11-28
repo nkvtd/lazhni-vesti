@@ -1,6 +1,7 @@
 <template>
   <div class="flex min-h-screen flex-col">
     <Navbar />
+    <AppLoader />
     <main class="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 pt-8 pb-16">
       <slot />
     </main>
@@ -9,6 +10,8 @@
 </template>
 
 <script setup lang="ts">
+// biome-ignore lint/correctness/noUnusedImports: used in <template> only
+import AppLoader from "../components/layout/AppLoader.vue";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only
 import Footer from "../components/layout/Footer.vue";
 // biome-ignore lint/correctness/noUnusedImports: used in <template> only

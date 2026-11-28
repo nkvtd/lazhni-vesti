@@ -6,7 +6,7 @@
       </a>
 
       <nav class="hidden items-center gap-1.5 md:flex" aria-label="Главно мени">
-        <a href="/" :class="linkClass('/')" :aria-current="isActive('/') ? 'page' : undefined">Игра</a>
+        <a href="/" :class="linkClass('/')" :aria-current="isActive('/') ? 'page' : undefined">Дома</a>
         <a href="/archive" :class="linkClass('/archive')" :aria-current="isActive('/archive') ? 'page' : undefined">Архива</a>
         <a href="/leaderboard" :class="linkClass('/leaderboard')" :aria-current="isActive('/leaderboard') ? 'page' : undefined">
           Рангирање
@@ -60,7 +60,7 @@
 
     <nav id="main-menu" v-show="menuOpen" class="border-t-2 border-ink/10 bg-paper md:hidden" aria-label="Главно мени">
       <div class="mx-auto flex w-full max-w-[1400px] flex-col gap-1 px-4 py-3">
-        <a href="/" :class="mobileLinkClass('/')" :aria-current="isActive('/') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Игра</a>
+        <a href="/" :class="mobileLinkClass('/')" :aria-current="isActive('/') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Дома</a>
         <a href="/archive" :class="mobileLinkClass('/archive')" :aria-current="isActive('/archive') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Архива</a>
         <a href="/leaderboard" :class="mobileLinkClass('/leaderboard')" :aria-current="isActive('/leaderboard') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Рангирање</a>
         <a v-if="pageContext.user?.role === 'admin'" href="/admin" :class="mobileLinkClass('/admin')" :aria-current="isActive('/admin') ? 'page' : undefined" class="rounded-md px-3 py-2 text-sm font-bold" @click="menuOpen = false">Админ</a>

@@ -15,7 +15,7 @@
             <ScoreHud
               :score="challenge.score"
               :wrong-guesses="challenge.wrongGuessesCount"
-              :hints-used="challenge.hintsUsedCount"
+              :letters-revealed="lettersRevealedCount"
               :solved-count="solvedCount"
               :total-blanks="challenge.blanks.length"
               :streak="pageContext.user?.currentStreak ?? 0"
@@ -36,6 +36,14 @@
           </div>
 
           <div class="p-5 sm:p-6 lg:p-8">
+            <details v-if="challenge.eventContext" class="group mb-5 rounded-md border-2 border-ink/15 bg-accent-soft/40">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 [&::-webkit-details-marker]:hidden">
+                <span class="flex items-center gap-2 text-sm font-bold text-ink">Што се случи?</span>
+                <span class="chip border-ink/15 bg-card">Без казна</span>
+              </summary>
+              <p class="border-t-2 border-ink/10 px-3 py-2 text-sm text-ink-soft">{{ challenge.eventContext }}</p>
+            </details>
+
             <HeadlineBoard
               :challenge="challenge"
               :segments="segments"
@@ -44,26 +52,67 @@
               @focus="(i) => (activeBlank = i)"
             />
 
+            <div v-if="!challenge.completed && activeBlankObj" class="mt-5 rounded-md border-2 border-ink/15 bg-card p-3">
+              <p class="text-xs font-bold uppercase tracking-wide text-ink-soft">Збор {{ activeBlankObj.index + 1 }} · {{ activeBlankObj.answerLength }} букви</p>
+              <div class="mt-2 flex flex-wrap gap-1">
+                <span
+                  v-for="pos in activeBlankObj.answerLength"
+                  :key="pos"
+                  aria-hidden="true"
+                  class="inline-flex size-6 items-center justify-center rounded-sm border-2 border-ink text-xs font-bold"
+                  :class="revealedChar(activeBlankObj, pos - 1) ? 'bg-accent text-white' : 'bg-ink/10'"
+                >{{ revealedChar(activeBlankObj, pos - 1) ?? "_" }}</span>
+              </div>
+
+              <p class="mt-2 text-sm italic text-ink-soft">„{{ activeBlankObj.hint }}“</p>
+
+              <div v-if="activeBlankObj.letterFeedback" class="mt-2 flex flex-wrap gap-1">
+                <span
+                  v-for="(fb, i) in activeBlankObj.letterFeedback"
+                  :key="i"
+                  class="inline-flex size-6 items-center justify-center rounded-sm border-2 border-ink text-xs font-bold"
+                  :class="fb.status === 'exact' ? 'bg-accent text-white' : fb.status === 'misplaced' ? 'bg-amber-400 text-[#1c1b18]' : 'bg-ink/10 text-ink-soft'"
+                >{{ fb.char }}</span>
+              </div>
+
+              <div v-if="activeBlankObj.options" class="mt-3 flex flex-wrap gap-2">
+                <button
+                  v-for="opt in activeBlankObj.options"
+                  :key="opt"
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  :aria-label="`Избери опција: ${opt}`"
+                  :disabled="isBusy"
+                  @click="onOptionGuess(opt)"
+                >{{ opt }}</button>
+              </div>
+
+              <p v-if="autoAssistedBlank === activeBlank" role="status" class="mt-2 text-sm text-ink-soft">Опциите се отклучени автоматски — без казна.</p>
+            </div>
+
             <div v-if="!challenge.completed" class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t-2 border-ink/10 pt-4">
               <p class="text-xs font-bold text-ink-soft">
                 Напишете го зборот и притиснете <kbd class="rounded-md border-2 border-ink bg-card px-1 font-sans shadow-hard-sm">Enter</kbd> · решени {{ solvedCount }}/{{ challenge.blanks.length }}
               </p>
-              <div class="flex gap-2">
-                <button type="button" class="btn btn-secondary btn-sm" :disabled="isBusy || !canHint" @click="hintActive">Хинт −250</button>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" :disabled="isBusy || !canRevealLetter" @click="onRevealLetter">Откриј буква −40</button>
+                <button v-if="activeBlankObj?.hasDecoys" type="button" class="btn btn-secondary btn-sm" :disabled="isBusy || !canUnlockOptions" @click="onUnlockOptions(false)">4 опции −80</button>
                 <button type="button" class="btn btn-primary btn-sm" :disabled="isBusy || activeBlank === null" @click="submitActive">Погоди</button>
               </div>
             </div>
 
             <div v-else class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t-2 border-ink/10 pt-4">
               <p class="text-sm font-bold text-ink">{{ challenge.won ? "Решено" : "Не е решено" }} · {{ challenge.score }}/1000</p>
-              <button type="button" class="btn btn-secondary btn-sm" @click="showSummary = true">Прикажи резултат</button>
+              <div class="flex flex-wrap items-center gap-2">
+                <a v-if="hasPartTwo && !pageContext.user" href="/login?redirect=/play" class="btn btn-primary btn-sm">Најави се за дел 2 →</a>
+                <button v-else-if="hasPartTwo" type="button" class="btn btn-primary btn-sm" @click="goPartTwo">Продолжи кон дел 2 →</button>
+                <button v-if="hasPartTwo" type="button" class="btn btn-secondary btn-sm" @click="showSummary = true">Заврши тука</button>
+                <button v-if="!hasPartTwo" type="button" class="btn btn-secondary btn-sm" @click="showSummary = true">Прикажи резултат</button>
+              </div>
             </div>
 
             <p v-if="wrongFeedback" role="status" class="mt-2 text-sm font-medium text-wrong">Не е тоа — обидете се повторно.</p>
             <p v-if="error" role="alert" class="mt-2 text-sm font-medium text-wrong">{{ error }}</p>
-            <div v-if="activeHintText" class="mt-3 rounded-r-lg border-l-4 border-amber-500 bg-amber-100 px-3 py-2 text-sm font-medium text-ink">
-              <span class="font-bold text-amber-700">Хинт ({{ (activeBlank ?? 0) + 1 }}):</span> {{ activeHintText }}
-            </div>
           </div>
         </div>
 
@@ -73,23 +122,16 @@
 
     <GameSummaryModal
       v-if="showSummary && challenge"
-      :original-title="challenge.originalTitle"
-      :source-name="challenge.sourceName"
-      :source-url="challenge.sourceUrl"
-      :score="challenge.score"
-      :won="challenge.won"
-      :play-date="challenge.playDate"
-      :wrong-guesses="challenge.wrongGuessesCount"
-      :hints-used="challenge.hintsUsedCount"
+      :challenge="challenge"
       :is-archive="isArchive"
-      :tm-active="isArchive && challenge.canUseTimeMachine"
+      :streak="pageContext.user?.currentStreak ?? 0"
       @close="onSummaryClose"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { reload } from "vike/client/router";
+import { navigate, reload } from "vike/client/router";
 import { usePageContext } from "vike-vue/usePageContext";
 import {
     computed,
@@ -119,35 +161,68 @@ const { initialChallenge, isArchive = false } = defineProps<{
 }>();
 
 const pageContext = usePageContext();
-const { challenge, segments, isBusy, submitGuess, unlockHint } =
-    useGameSession(initialChallenge);
+const {
+    challenge,
+    segments,
+    isBusy,
+    submitGuess,
+    revealLetter,
+    unlockOptions,
+} = useGameSession(initialChallenge);
 
 const error = ref<string | null>(null);
 const showSummary = ref(false);
 
 const activeBlank = ref<number | null>(null);
 const wrongFeedback = ref(false);
+const autoAssistedBlank = ref<number | null>(null);
+const autoAssistFired = new Set<number>();
 let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
 
 const solvedCount = computed(
     () => challenge.value?.blanks.filter((b) => b.solved).length ?? 0,
+);
+const lettersRevealedCount = computed(
+    () =>
+        challenge.value?.blanks.reduce(
+            (sum, b) => sum + b.revealedLetters.length,
+            0,
+        ) ?? 0,
 );
 const activeBlankObj = computed(
     () =>
         challenge.value?.blanks.find((b) => b.index === activeBlank.value) ??
         null,
 );
-const canHint = computed(
-    () =>
-        Boolean(challenge.value && !challenge.value.completed) &&
-        (challenge.value?.score ?? 0) > 250 &&
-        activeBlankObj.value !== null &&
-        !activeBlankObj.value.solved &&
-        !activeBlankObj.value.hintUsed,
-);
-const activeHintText = computed(
-    () => activeBlankObj.value?.revealedHint ?? null,
-);
+const canRevealLetter = computed(() => {
+    const b = activeBlankObj.value;
+    return Boolean(
+        challenge.value &&
+            !challenge.value.completed &&
+            b &&
+            !b.solved &&
+            (challenge.value.score ?? 0) > 40 &&
+            b.revealedLetters.length < b.answerLength,
+    );
+});
+const canUnlockOptions = computed(() => {
+    const b = activeBlankObj.value;
+    return Boolean(
+        challenge.value &&
+            !challenge.value.completed &&
+            b &&
+            !b.solved &&
+            !b.options &&
+            (challenge.value.score ?? 0) > 80,
+    );
+});
+
+function revealedChar(
+    blank: NonNullable<typeof activeBlankObj.value>,
+    position: number,
+): string | undefined {
+    return blank.revealedLetters.find((l) => l.position === position)?.char;
+}
 
 function focusBlankInput(index: number) {
     // biome-ignore lint/style/useVueNextTickPromise: callback form keeps focus logic local
@@ -185,19 +260,30 @@ async function onGuess(blankIndex: number, word: string) {
     }
 }
 
-async function onHint(blankIndex: number) {
+async function onRevealLetter() {
+    if (activeBlank.value === null) return;
     error.value = null;
     wrongFeedback.value = false;
     try {
-        await unlockHint(blankIndex);
-        if (activeBlank.value !== null) focusBlankInput(activeBlank.value);
+        await revealLetter(activeBlank.value);
     } catch (e) {
         error.value = errMessage(e);
     }
 }
 
-function hintActive() {
-    if (activeBlank.value !== null) onHint(activeBlank.value);
+async function onUnlockOptions(autoAssist = false) {
+    if (activeBlank.value === null) return;
+    error.value = null;
+    wrongFeedback.value = false;
+    try {
+        await unlockOptions(activeBlank.value, autoAssist);
+    } catch (e) {
+        error.value = errMessage(e);
+    }
+}
+
+function onOptionGuess(option: string) {
+    if (activeBlank.value !== null) onGuess(activeBlank.value, option);
 }
 
 function submitActive() {
@@ -208,12 +294,21 @@ function submitActive() {
     onGuess(activeBlank.value, input?.value.trim() ?? "");
 }
 
-const seenKey = computed(() =>
-    challenge.value ? `lv_summary_seen_${challenge.value.playDate}` : "",
+const hasPartTwo = computed(() =>
+    Boolean(
+        challenge.value?.realityCheck &&
+            challenge.value?.techniqueId &&
+            !challenge.value?.isFreePlay,
+    ),
 );
 const statsKey = computed(() =>
     challenge.value ? `lv_stats_refreshed_${challenge.value.playDate}` : "",
 );
+
+function goPartTwo() {
+    if (!challenge.value) return;
+    navigate(isArchive ? `/debrief/${challenge.value.playDate}` : "/debrief");
+}
 
 function onSummaryClose() {
     showSummary.value = false;
@@ -230,36 +325,47 @@ function onSummaryClose() {
     }
 }
 
-function markSeen() {
-    if (seenKey.value) localStorage.setItem(seenKey.value, "1");
-}
-
 onMounted(() => {
-    if (challenge.value?.completed) {
-        if (!localStorage.getItem(seenKey.value)) {
-            showSummary.value = true;
-            markSeen();
-        }
-    } else if (challenge.value) {
-        const first = challenge.value.blanks.find((b) => !b.solved);
-        if (first) {
-            activeBlank.value = first.index;
-            focusBlankInput(first.index);
-        }
+    const first = challenge.value?.blanks.find((b) => !b.solved);
+    if (first) {
+        activeBlank.value = first.index;
+        focusBlankInput(first.index);
     }
 });
 
 onBeforeUnmount(() => clearTimeout(feedbackTimer));
 
+// Auto-assist: after 3 wrong typed guesses on the active blank, unlock options free.
 watch(
-    () => challenge.value?.completed,
-    (done) => {
-        if (!done) return;
-        activeBlank.value = null;
-        if (!localStorage.getItem(seenKey.value)) {
-            showSummary.value = true;
-            markSeen();
+    () =>
+        [
+            activeBlank.value,
+            activeBlankObj.value?.wrongAttempts,
+            isBusy.value,
+        ] as const,
+    async () => {
+        const b = activeBlankObj.value;
+        if (
+            !challenge.value ||
+            challenge.value.completed ||
+            isBusy.value ||
+            !b ||
+            b.solved ||
+            !b.hasDecoys ||
+            b.options ||
+            b.wrongAttempts < 3 ||
+            autoAssistFired.has(b.index)
+        ) {
+            return;
+        }
+        autoAssistFired.add(b.index);
+        try {
+            await unlockOptions(b.index, true);
+            autoAssistedBlank.value = b.index;
+        } catch (e) {
+            error.value = errMessage(e);
         }
     },
+    { immediate: true },
 );
 </script>

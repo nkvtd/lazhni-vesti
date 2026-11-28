@@ -6,7 +6,7 @@
       <div class="mt-3 flex flex-col gap-3 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
         <p class="text-xs text-ink-soft">Лажни вести? — сатира врз вистински наслови од македонските портали.</p>
         <nav class="flex items-center justify-center gap-4 text-xs" aria-label="Мени во подножје">
-          <a href="/" class="text-ink-soft hover:text-ink">Игра</a>
+          <a href="/play" class="text-ink-soft hover:text-ink">Игра</a>
           <a href="/archive" class="text-ink-soft hover:text-ink">Архива</a>
           <a href="/leaderboard" class="text-ink-soft hover:text-ink">Рангирање</a>
         </nav>

@@ -8,7 +8,11 @@ import {
     user,
     usersToBadges,
 } from "../schema";
-import { getSkopjeDateString, getStartOfMonth } from "./util";
+import {
+    getSkopjeDateString,
+    getStartOfMonth,
+    getStartOfWeekDateString,
+} from "./util";
 
 export const TIME_MACHINE_COST = 1500;
 export const TIME_MACHINE_MONTHLY_LIMIT = 2;
@@ -35,6 +39,25 @@ const STREAK_BADGES = [
     },
 ];
 
+const V2_BADGES = [
+    {
+        name: "Факт-чекер",
+        description:
+            "Прв пат точно ја препозна вистинитата содржина зад насловот.",
+        icon: "check",
+    },
+    {
+        name: "Без помош",
+        description: "Победа без откриени букви и без опции.",
+        icon: "shield",
+    },
+    {
+        name: "Неделен херој",
+        description: "Освоени 5 или повеќе денови во една недела.",
+        icon: "medal",
+    },
+];
+
 function getPreviousDateStr(dateStr: string): string {
     const d = new Date(`${dateStr}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() - 1);
@@ -42,20 +65,33 @@ function getPreviousDateStr(dateStr: string): string {
 }
 
 async function ensureBadgesExist(db: DbOrTx) {
-    const existing = await db.select().from(badges);
-    if (existing.length > 0) return existing;
-
     await db
         .insert(badges)
         .values(
-            STREAK_BADGES.map(({ name, description, icon }) => ({
-                name,
-                description,
-                icon,
-            })),
+            [...STREAK_BADGES, ...V2_BADGES].map(
+                ({ name, description, icon }) => ({
+                    name,
+                    description,
+                    icon,
+                }),
+            ),
         )
         .onConflictDoNothing({ target: badges.name });
     return db.select().from(badges);
+}
+
+export async function awardBadgeByName(
+    db: DbOrTx,
+    userId: string,
+    name: string,
+) {
+    const allBadges = await ensureBadgesExist(db);
+    const badge = allBadges.find((b) => b.name === name);
+    if (!badge) return;
+    await db
+        .insert(usersToBadges)
+        .values({ userId, badgeId: badge.id })
+        .onConflictDoNothing();
 }
 
 export async function getUserWonDates(
@@ -305,6 +341,30 @@ export async function getUserAccountData(db: DbOrTx, userId: string) {
 
     const usedThisMonth = await getMonthlyTimeMachineUsage(db, userId);
 
+    const learnedTechniqueRows = await db
+        .selectDistinct({ techniqueId: dailyChallenges.techniqueId })
+        .from(gameSessions)
+        .innerJoin(
+            dailyChallenges,
+            eq(gameSessions.challengeId, dailyChallenges.id),
+        )
+        .where(
+            and(
+                eq(gameSessions.userId, userId),
+                eq(gameSessions.completed, true),
+                eq(gameSessions.isFreePlay, false),
+                gt(gameSessions.score, 0),
+            ),
+        )
+        .orderBy(dailyChallenges.techniqueId);
+
+    const wonDates = await getUserWonDates(db, userId);
+    const weekStart = getStartOfWeekDateString();
+    const today = getSkopjeDateString();
+    const wonThisWeek = Array.from(wonDates).filter(
+        (d) => d >= weekStart && d <= today,
+    ).length;
+
     return {
         earnedBadges:
             userWithBadges?.usersToBadges.map((ub) => ({
@@ -319,5 +379,9 @@ export async function getUserAccountData(db: DbOrTx, userId: string) {
                 TIME_MACHINE_MONTHLY_LIMIT - usedThisMonth,
             ),
         },
+        learnedTechniques: learnedTechniqueRows
+            .map((row) => row.techniqueId)
+            .filter((id): id is string => Boolean(id)),
+        weeklyProgress: { won: wonThisWeek, target: 7 },
     };
 }
